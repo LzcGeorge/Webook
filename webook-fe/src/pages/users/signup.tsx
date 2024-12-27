@@ -7,10 +7,10 @@ import router from "next/router";
 const onFinish = (values: any) => {
     axios.post("/users/signup", values)
         .then((res) => {
-            if(res.status != 200) {
-                alert(res.statusText);
-                return
-            }
+            // if(res.status != 200) {
+            //     alert(res.statusText);
+            //     return
+            // }
             if(typeof res.data == 'string') {
                 alert(res.data);
             } else {

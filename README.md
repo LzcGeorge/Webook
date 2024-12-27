@@ -6,6 +6,12 @@ Webook小微书（仿小红书）
 
     ![image-20241226202631481](./assets/image-20241226202631481.png)
 
+项目启动：
+- 前端：在 webook-fe 目录下，执行 `npm run dev`
+- 后端：在 webook 目录下，执行 `go run main.go`
+- 数据库：在 webook 目录下，执行 `docker compose up`
+  - 执行 `docker compose down` 会删除数据库，结束 `docker compose up` 进程不会
+
 ## 流程记录
 
 ### Week2
@@ -15,7 +21,8 @@ Webook小微书（仿小红书）
 1. Bind 绑定请求参数，绑定到结构体 UserSignUpReq
 2. 用正则表达式校验邮箱和密码格式
 3. 确认密码和密码一致
-4. 返回注册成功
+4. 调用 service 层进行注册
+5. 返回注册成功
 
 跨域请求：
 

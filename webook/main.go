@@ -1,15 +1,31 @@
 package main
 
 import (
+	"Webook/webook/internal/repository"
+	"Webook/webook/internal/repository/dao"
+	"Webook/webook/internal/service"
 	"Webook/webook/internal/web"
 	"strings"
 	"time"
 
+	"gorm.io/driver/mysql"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func main() {
+
+	db := initDB()
+	u := initUser(db)
+	server := initWebServer(u)
+
+	u.RegisterRoutes(server.Group("/users"))
+	_ = server.Run(":8080") // listen and serve on 8080
+}
+
+func initWebServer(u *web.UserHandler) *gin.Engine {
 	server := gin.Default()
 
 	// middleware: 跨域请求
@@ -27,8 +43,25 @@ func main() {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	// 注册 User 路由
-	u := web.NewUserHandler()
-	u.RegisterRoutes(server.Group("/users"))
-	_ = server.Run(":8080") // listen and serve on 8080
+	return server
+}
+
+func initUser(db *gorm.DB) *web.UserHandler {
+	ud := dao.NewUserDAO(db)
+	repo := repository.NewUserRepository(ud)
+	svc := service.NewUserService(repo)
+	u := web.NewUserHandler(svc)
+	return u
+}
+
+func initDB() *gorm.DB {
+	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"))
+	if err != nil {
+		panic(err)
+	}
+	err = dao.InitTable(db)
+	if err != nil {
+		panic(err)
+	}
+	return db
 }
