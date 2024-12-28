@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
@@ -97,8 +98,36 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "user signup")
 }
 
-func (u *UserHandler) Login(ctx *gin.Context) {
+type LoginReq struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
+func (u *UserHandler) Login(ctx *gin.Context) {
+	var req LoginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	// 调用 service 层进行登录
+	user, err := u.svc.Login(ctx, req.Email, req.Password)
+	if err == service.ErrInvalidUserOrPassword {
+		ctx.String(http.StatusOK, "用户名或密码不对")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	// 登录成功，设置 session
+	sess := sessions.Default(ctx)
+	sess.Set("userId", user.Id)
+	sess.Save()
+
+	// 获取 session
+	userId := sess.Get("userId")
+	ctx.String(http.StatusOK, "登录成功，userId: %d", userId)
 }
 
 func (u *UserHandler) Edit(ctx *gin.Context) {
@@ -107,8 +136,6 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
 	// 在页面上显示 hello world
-	ctx.JSON(200, gin.H{ // 返回一个json格式的数据
-		"message": "hello world",
-	})
+	ctx.String(http.StatusOK, "hello world")
 
 }

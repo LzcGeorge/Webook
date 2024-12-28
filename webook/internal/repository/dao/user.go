@@ -11,6 +11,7 @@ import (
 
 var (
 	ErrUserDuplicateEmail = errors.New("邮箱冲突")
+	ErrUserNotFound       = gorm.ErrRecordNotFound
 )
 
 type UserDAO struct {
@@ -45,9 +46,17 @@ func (dao *UserDAO) Insert(ctx context.Context, user User) error {
 	if mysqlErr, ok := err.(*mysql.MySQLError); ok {
 		const uniqueIndexErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueIndexErrNo {
+			// 邮箱冲突
 			return ErrUserDuplicateEmail
 		}
 	}
 	return err
 
+}
+
+func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error) {
+	var user User
+	// 按 email 查询，查询到的第一条数据绑定到 user 中
+	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	return user, err
 }

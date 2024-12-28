@@ -5,8 +5,12 @@ import (
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/service"
 	"Webook/webook/internal/web"
+	"Webook/webook/internal/web/middleware"
 	"strings"
 	"time"
+
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 
 	"gorm.io/driver/mysql"
 
@@ -43,6 +47,12 @@ func initWebServer(u *web.UserHandler) *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 
+	// middleware：利用 session 插件，从 cookie 中获取 sessionID，校验登录状态
+	store := cookie.NewStore([]byte("secret"))
+	server.Use(sessions.Sessions("mysession", store))
+	server.Use(middleware.NewLoginMiddlewareBuilder().
+		IgnorePaths("/users/login", "/users/signup").
+		Build())
 	return server
 }
 
