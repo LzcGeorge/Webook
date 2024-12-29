@@ -79,7 +79,21 @@ Webook小微书（仿小红书）
 > - 通过 SessionID 来识别用户
 > - 一般通过 Cookie 来传递 SessionID
 >
+> Redis：
+> - 用户数据存储在 Redis 中
+>
 > LoginMiddlewareBuilder：
 > - 登录中间件，用于校验登录状态
 > - 通过 IgnorePaths 方法，设置不校验登录状态的路径
-> - 通过 Build 方法，构建中间件
+> - 通过 Build 方法，构建中间件: 链式调用
+>
+> Debug 定位问题：
+> 倒排确定：http 发送请求，中间件，业务逻辑，数据库
+> F12 查看错误信息
+> 后端看日志
+>
+> Session 的过期时间：
+> - 通过中间件 LoginMiddlewareBuilder 设置，当访问不在 IgnorePaths 的路径时，会更新 Session 的 update_time 字段
+> - 同时更新 Session 的过期时间 MaxAge
+> - 但每次访问都要从 Redis 中获取 Session，性能较差（所以后面引入 JWT）
+> 

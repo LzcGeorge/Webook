@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
+	_ "github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-contrib/sessions/redis"
 
 	"gorm.io/driver/mysql"
 
@@ -48,7 +49,14 @@ func initWebServer(u *web.UserHandler) *gin.Engine {
 	}))
 
 	// middleware：利用 session 插件，从 cookie 中获取 sessionID，校验登录状态
-	store := cookie.NewStore([]byte("secret"))
+	// store := cookie.NewStore([]byte("secret"))
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+		// authentication 和 encryption 的密钥
+		[]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"), []byte("JKK0iptdv10H1HnVP6mVCk2HDi8WjAKH"))
+
+	if err != nil {
+		panic(err)
+	}
 	server.Use(sessions.Sessions("mysession", store))
 	server.Use(middleware.NewLoginMiddlewareBuilder().
 		IgnorePaths("/users/login", "/users/signup").

@@ -122,12 +122,27 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 
 	// 登录成功，设置 session
 	sess := sessions.Default(ctx)
+	sess.Options(sessions.Options{
+		// 设置 session 的过期时间
+		// MaxAge: 60 * 30, // 30 min
+		MaxAge: 60,
+	})
 	sess.Set("userId", user.Id)
+
 	sess.Save()
 
 	// 获取 session
 	userId := sess.Get("userId")
 	ctx.String(http.StatusOK, "登录成功，userId: %d", userId)
+}
+
+func (u *UserHandler) Logout(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	sess.Options(sessions.Options{
+		MaxAge: -1,
+	})
+	sess.Save()
+	ctx.String(http.StatusOK, "退出登录")
 }
 
 func (u *UserHandler) Edit(ctx *gin.Context) {
@@ -136,6 +151,9 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
 	// 在页面上显示 hello world
-	ctx.String(http.StatusOK, "hello world")
+	sess := sessions.Default(ctx)
+	userId := sess.Get("userId")
+
+	ctx.String(http.StatusOK, "hello world, userId: %d", userId)
 
 }
