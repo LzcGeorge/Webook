@@ -100,8 +100,12 @@ Webook小微书（仿小红书）
 > - 但每次访问都要从 Redis 中获取 Session，性能较差（所以后面引入 JWT）
 >
 > 接入 JWT：
-> 在 Login 方法中，生成 JWT Token，并返回给前端 x-jwt-token
-> 跨域中间件 设置 x-jwt-token 为 ExposeHeaders
-> Middleware 中，解析 JWT Token，验证 signature
-> 前端要携带 x-jwt-token 请求
-> 实现 JWT Token 的刷新，长短 token 的过期时间不同，多实例部署时，需要考虑 token 的过期时间
+> - 在 Login 方法中，生成 JWT Token，并返回给前端 x-jwt-token
+> - 跨域中间件 设置 x-jwt-token 为 ExposeHeaders
+> - Middleware 中，解析 JWT Token，验证 signature
+> - 前端要携带 x-jwt-token 请求
+> - 实现 JWT Token 的刷新，长短 token 的过期时间不同，多实例部署时，需要考虑 token 的过期时间
+>
+> 登录安全
+> - 限流，采用滑动窗口算法：一分钟内最多 100 次请求- 
+> - 检查 userAgent 是否一致

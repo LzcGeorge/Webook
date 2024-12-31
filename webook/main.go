@@ -6,12 +6,13 @@ import (
 	"Webook/webook/internal/service"
 	"Webook/webook/internal/web"
 	"Webook/webook/internal/web/middleware"
+	"Webook/webook/pkg/ginx/middlewares/ratelimit"
 	"strings"
 	"time"
 
 	"github.com/gin-contrib/sessions"
-	_ "github.com/gin-contrib/sessions/cookie"
-	"github.com/gin-contrib/sessions/redis"
+	"github.com/gin-contrib/sessions/memstore"
+	"github.com/redis/go-redis/v9"
 
 	"gorm.io/driver/mysql"
 
@@ -33,6 +34,12 @@ func main() {
 func initWebServer(u *web.UserHandler) *gin.Engine {
 	server := gin.Default()
 
+	// 限流
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+
 	// middleware: 跨域请求
 	server.Use(cors.New(cors.Config{
 		AllowHeaders: []string{"Content-Type", "Authorization"},
@@ -50,15 +57,21 @@ func initWebServer(u *web.UserHandler) *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 
-	// middleware：利用 session 插件，从 cookie 中获取 sessionID，校验登录状态
-	// store := cookie.NewStore([]byte("secret"))
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
-		// authentication 和 encryption 的密钥
-		[]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"), []byte("JKK0iptdv10H1HnVP6mVCk2HDi8WjAKH"))
+	// middleware：获取 sessionID，校验登录状态
+	// 使用 memstore 作为 session 的存储
+	store := memstore.NewStore([]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"), []byte("JKK0iptdv10H1HnVP6mVCk2HDi8WjAKH"))
 
-	if err != nil {
-		panic(err)
-	}
+	// 使用 cookie 作为 session 的存储
+	// store := cookie.NewStore([]byte("secret"))
+
+	// 使用 redis 作为 session 的存储
+	// store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+	// 	// authentication 和 encryption 的密钥
+	// 	[]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"), []byte("JKK0iptdv10H1HnVP6mVCk2HDi8WjAKH"))
+	// if err != nil {
+	// 	panic(err)
+	// }
+
 	server.Use(sessions.Sessions("mysession", store))
 	// server.Use(middleware.NewLoginMiddlewareBuilder().
 	// 	IgnorePaths("/users/login", "/users/signup").

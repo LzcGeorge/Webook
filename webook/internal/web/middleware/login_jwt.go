@@ -64,6 +64,12 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
+		// 检查 userAgent 是否一致
+		if claims.UserAgent != ctx.Request.UserAgent() {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
 		// token refresh: 每十秒刷新一次 token
 		now := time.Now()
 		if claims.ExpiresAt.Sub(now) < time.Second*50 {

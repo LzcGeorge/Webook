@@ -143,6 +143,7 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 type UserClaims struct {
 	UserId int64
 	jwt.RegisteredClaims
+	UserAgent string
 }
 
 func (u *UserHandler) LoginJWT(ctx *gin.Context) {
@@ -168,7 +169,8 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 			// 设置 token 的过期时间: 1 分钟
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
-		UserId: user.Id,
+		UserId:    user.Id,
+		UserAgent: ctx.Request.UserAgent(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
