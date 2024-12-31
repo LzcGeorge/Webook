@@ -65,6 +65,8 @@ Webook小微书（仿小红书）
 登录状态的校验：
 - 利用 Gin 的 session 插件，从 cookie 中获取 sessionID，校验登录状态
 - 采用 Cookie 和 Session 进行登录状态的保持
+- 接入 JWT 后，采用 JWT Token 和 Token Refresh 进行登录状态的保持
+- 
 
 > Cookie：
 > - Domain：Cookie 可以在什么域名下使用
@@ -96,4 +98,10 @@ Webook小微书（仿小红书）
 > - 通过中间件 LoginMiddlewareBuilder 设置，当访问不在 IgnorePaths 的路径时，会更新 Session 的 update_time 字段
 > - 同时更新 Session 的过期时间 MaxAge
 > - 但每次访问都要从 Redis 中获取 Session，性能较差（所以后面引入 JWT）
-> 
+>
+> 接入 JWT：
+> 在 Login 方法中，生成 JWT Token，并返回给前端 x-jwt-token
+> 跨域中间件 设置 x-jwt-token 为 ExposeHeaders
+> Middleware 中，解析 JWT Token，验证 signature
+> 前端要携带 x-jwt-token 请求
+> 实现 JWT Token 的刷新，长短 token 的过期时间不同，多实例部署时，需要考虑 token 的过期时间

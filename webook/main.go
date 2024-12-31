@@ -36,6 +36,8 @@ func initWebServer(u *web.UserHandler) *gin.Engine {
 	// middleware: 跨域请求
 	server.Use(cors.New(cors.Config{
 		AllowHeaders: []string{"Content-Type", "Authorization"},
+		// 暴露给前端，前端可以从 Header 中获取
+		ExposeHeaders: []string{"x-jwt-token"},
 		// 允许跨域请求携带 cookie
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
@@ -58,7 +60,10 @@ func initWebServer(u *web.UserHandler) *gin.Engine {
 		panic(err)
 	}
 	server.Use(sessions.Sessions("mysession", store))
-	server.Use(middleware.NewLoginMiddlewareBuilder().
+	// server.Use(middleware.NewLoginMiddlewareBuilder().
+	// 	IgnorePaths("/users/login", "/users/signup").
+	// 	Build())
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/login", "/users/signup").
 		Build())
 	return server

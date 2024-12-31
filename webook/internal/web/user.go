@@ -4,10 +4,12 @@ import (
 	"Webook/webook/internal/domain"
 	"Webook/webook/internal/service"
 	"net/http"
+	"time"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 type UserHandler struct {
@@ -19,9 +21,11 @@ type UserHandler struct {
 // 注册路由
 func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/signup", u.SignUp)
-	ug.POST("/login", u.Login)
+	// ug.POST("/login", u.Login)
+	ug.POST("/login", u.LoginJWT)
 	ug.PUT("/edit", u.Edit)
-	ug.GET("/profile", u.Profile)
+	// ug.GET("/profile", u.Profile)
+	ug.GET("/profile", u.ProfileJWT)
 }
 
 const (
@@ -136,6 +140,47 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "登录成功，userId: %d", userId)
 }
 
+type UserClaims struct {
+	UserId int64
+	jwt.RegisteredClaims
+}
+
+func (u *UserHandler) LoginJWT(ctx *gin.Context) {
+	var req LoginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	// 调用 service 层进行登录
+	user, err := u.svc.Login(ctx, req.Email, req.Password)
+	if err == service.ErrInvalidUserOrPassword {
+		ctx.String(http.StatusOK, "用户名或密码不对")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	// claims 中存储用户的信息
+	claims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			// 设置 token 的过期时间: 1 分钟
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+		UserId: user.Id,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	tokenStr, err := token.SignedString([]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"))
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+	ctx.String(http.StatusOK, "JWT 登录成功，token: %s", tokenStr)
+}
+
 func (u *UserHandler) Logout(ctx *gin.Context) {
 	sess := sessions.Default(ctx)
 	sess.Options(sessions.Options{
@@ -156,4 +201,15 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 
 	ctx.String(http.StatusOK, "hello world, userId: %d", userId)
 
+}
+
+func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	userClaims := claims.(*UserClaims)
+	println(userClaims.UserId)
+	ctx.String(http.StatusOK, "jwt userId: %d", userClaims.UserId)
 }
