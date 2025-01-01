@@ -7,6 +7,7 @@ import (
 	"Webook/webook/internal/web"
 	"Webook/webook/internal/web/middleware"
 	"Webook/webook/pkg/ginx/middlewares/ratelimit"
+	"net/http"
 	"strings"
 	"time"
 
@@ -23,11 +24,17 @@ import (
 
 func main() {
 
-	db := initDB()
-	u := initUser(db)
-	server := initWebServer(u)
+	// db := initDB()
+	// u := initUser(db)
+	// server := initWebServer(u)
 
-	u.RegisterRoutes(server.Group("/users"))
+	// u.RegisterRoutes(server.Group("/users"))
+
+	server := gin.Default()
+	server.GET("/hello", func(ctx *gin.Context) {
+		ctx.String(http.StatusOK, "Hello, Kubernetes!")
+	})
+
 	_ = server.Run(":8080") // listen and serve on 8080
 }
 

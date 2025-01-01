@@ -109,3 +109,49 @@ Webook小微书（仿小红书）
 > 登录安全
 > - 限流，采用滑动窗口算法：一分钟内最多 100 次请求- 
 > - 检查 userAgent 是否一致
+
+### Kubernets 入门
+
+Pod: 实例
+Service: 服务
+Deployment: 管理 Pod
+
+准备 Kubernetes 容器镜像：
+
+- 创建可执行文件 `GOOS=linux GOARCH=arm go build -o webook .`
+- 创建 Dockerfile，将可执行文件复制到容器中，并设置入口点
+- 在命令行中登录 Docker Hub，`docker login`
+- 构建容器镜像：`docker build -t techselfknow/webook:v0.0.1 .`
+- 推送容器镜像：`docker push thchselfknow/webook:v0.0.1`
+
+Deployment 配置：
+
+- 创建 k8s-webook-deployment.yaml 文件
+- 在命令行中执行 `kubectl apply -f k8s-webook-deployment.yaml`
+- 查看 Deployment 状态：`kubectl get deployment`
+- 查看 Pod 状态：`kubectl get pod`
+- 查看 Service 状态：`kubectl get service`
+- 查看 Node 状态：`kubectl get node`
+
+> Deployment 配置：
+> - replicas: 副本数,有多少个 pod
+> - selector: 选择器
+>   - matchLabels: 根据 label 选择哪些 pod 属于这个 deployment
+>   - matchExpressions: 根据表达式选择哪些 pod 属于这个 deployment
+> - template: 模板，定义 pod 的模板
+>   - metadata: 元数据，定义 pod 的元数据
+>   - spec: 规格，定义 pod 的规格
+>     - containers: 容器，定义 pod 的容器
+>       - name: 容器名称
+>       - image: 容器镜像
+>       - ports: 容器端口
+>         - containerPort: 容器端口
+>
+
+Service 配置：
+
+- 创建 k8s-webook-service.yaml 文件，采用 LoadBalancer 类型
+- 在命令行中执行 `kubectl apply -f k8s-webook-service.yaml`
+- 查看 Service 状态：`kubectl get service`
+
+Service 中的端口(`spec.ports.targetPort`)和 Deployment 中的端口(`spec.containers.ports.containerPort`)对应关系, main.go 中配置的端口(`server.Run(":8080")`) 要保持一致.
