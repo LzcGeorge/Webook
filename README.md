@@ -122,7 +122,12 @@ Deployment: 管理 Pod
 - 创建 Dockerfile，将可执行文件复制到容器中，并设置入口点
 - 在命令行中登录 Docker Hub，`docker login`
 - 构建容器镜像：`docker build -t techselfknow/webook:v0.0.1 .`
-- 推送容器镜像：`docker push thchselfknow/webook:v0.0.1`
+
+删除工作负载 deployment， 服务 service， 和 pods：
+
+- 删除s Deployment：`kubectl delete deployment webook`
+- 删除 Service：`kubectl delete service webook`
+- 删除 Pod：`kubectl delete pod webook`
 
 Deployment 配置：
 
@@ -154,4 +159,91 @@ Service 配置：
 - 在命令行中执行 `kubectl apply -f k8s-webook-service.yaml`
 - 查看 Service 状态：`kubectl get service`
 
-Service 中的端口(`spec.ports.targetPort`)和 Deployment 中的端口(`spec.containers.ports.containerPort`)对应关系, main.go 中配置的端口(`server.Run(":8080")`) 要保持一致.
+> Service 中的端口(`spec.ports.targetPort`)和 Deployment 中的端口(`spec.containers.ports.containerPort`)对应关系, main.go 中配置的端口(`server.Run(":8080")`) 要保持一致.
+
+k8s 中 mysql 配置：
+
+![alt text](img/image.png)
+
+```bash
+webook main* ❯ kubectl get services                   
+NAME           TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+kubernetes     ClusterIP      10.96.0.1        <none>        443/TCP          38h
+webook-mysql   LoadBalancer   10.101.251.206   localhost     3309:32695/TCP   18s
+```
+
+区分服务端口和容器端口：
+- 服务端口 port：外部访问的端口
+- 容器端口 targetPort：容器内部监听的端口
+- ```yaml
+  ports:
+    - protocol: TCP
+      port: 3309
+      targetPort: 3306
+  ```
+
+k8s 中 mysql 持久化存储配置：
+
+- 创建 k8s-mysql-deployment.yaml 文件
+- 创建 k8s-mysql-pv.yaml 文件
+- 创建 k8s-mysql-pvc.yaml 文件
+- 在命令行中执行 `kubectl apply -f k8s-mysql-pv.yaml`
+- 在命令行中执行 `kubectl apply -f k8s-mysql-pvc.yaml`
+- 在命令行中执行 `kubectl apply -f k8s-mysql-deployment.yaml`
+
+持久化之后，mysql 数据存储在 `/mnt/data` 目录下，而不是在容器中。
+删除 Deployment 后，mysql 数据不会丢失，因为数据存储在 PV 中。
+重新创建 Deployment 后，mysql 数据会从 PV 中恢复。
+
+> 持久化存储：
+> - PV: 持久化卷，物理存储
+> - PVC: 持久化卷声明，逻辑存储
+> - 持久化存储的挂载路径：/var/lib/mysql （mysql 数据存储路径）
+
+配置 mysql 的 k8s 环境
+
+```yaml
+spec:
+  selector:
+    app: webook-mysql
+  ports:
+    - protocol: TCP
+      # 服务端口, 外部访问的端口
+      port: 11309
+      # 容器端口, 容器内部监听的端口
+      targetPort: 3306
+      # type 为 NodePort 时, 需要指定 nodePort
+      # 指定 nodePort 后, 可以通过 nodeIP:nodePort 访问服务
+      nodePort: 30002
+  type: NodePort
+```
+
+
+port (Service 端口):
+
+- 这是 Service 暴露给 Kubernetes 集群内部其他 Pod 或 Service 的端口。
+- 当集群内部的 Pod 需要访问这个 Service 时，它们会使用这个端口。
+- 在上面的 YAML 示例中，port: 11309 表示 Service 会在 11309 端口上监听连接请求。
+- 客户端（在集群内部）访问 Service 时，会使用这个端口进行连接。
+- 注意： 这个端口仅在 Kubernetes 集群内部使用。
+
+targetPort (Pod 端口):
+
+- 这是 Service 将请求转发到的目标 Pod 的端口。
+- targetPort 通常与 Pod 中运行的容器监听的端口一致。
+- 在上面的 YAML 示例中，targetPort: 3306 表示 Service 会将连接请求转发到目标 Pod 的 3306 端口，即你的 MySQL 容器内部监听的端口。
+- 通常，你的 MySQL 服务（或者其他应用程序）在容器内部会监听这个端口。
+- 注意： 在 Kubernetes 中，Pod 内部的端口号是相对于 Pod 内部的网络命名空间而言的。
+
+nodePort (Node 端口):
+
+- 这是当你的 Service type 设置为 NodePort 时，Kubernetes 集群中每个节点的 IP 地址上都会暴露的端口。
+- 当你需要从 Kubernetes 集群外部访问你的 Service 时，可以使用节点的 IP 地址和这个 nodePort 进行访问。
+- 在上面的 YAML 示例中，nodePort: 30002 表示 Kubernetes 会在所有节点的 IP 地址上开启 30002 端口，并将发送到这个端口的流量转发到 Service。
+- 客户端（在集群外部）可以通过节点的 IP 地址和 nodePort 连接到服务。
+- 注意： NodePort 的端口号通常在 30000-32767 之间，并且必须是唯一的。
+- 在上面的 YAML 示例中，nodePort: 30002 表示 Kubernetes 会在所有节点的 IP 地址上开启 30002 端口，并将发送到这个端口的流量转发到 Service。
+- 客户端（在集群外部）可以通过节点的 IP 地址和 nodePort 连接到服务。
+- 注意： NodePort 的端口号通常在 30000-32767 之间，并且必须是唯一的。
+- 注意： 使用 NodePort 时，你仍然需要访问 Kubernetes 集群节点来访问服务。它并不直接将端口暴露到互联网上。
+

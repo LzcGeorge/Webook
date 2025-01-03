@@ -1,6 +1,7 @@
 package main
 
 import (
+	"Webook/webook/config"
 	"Webook/webook/internal/repository"
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/service"
@@ -24,13 +25,13 @@ import (
 
 func main() {
 
-	// db := initDB()
-	// u := initUser(db)
-	// server := initWebServer(u)
+	db := initDB()
+	u := initUser(db)
+	server := initWebServer(u)
 
-	// u.RegisterRoutes(server.Group("/users"))
+	u.RegisterRoutes(server.Group("/users"))
 
-	server := gin.Default()
+	// server := gin.Default()
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "Hello, Kubernetes!")
 	})
@@ -41,9 +42,10 @@ func main() {
 func initWebServer(u *web.UserHandler) *gin.Engine {
 	server := gin.Default()
 
-	// 限流
+	// 限流，使用 k8s 环境
+	var redisConfig = config.K8sConfig.Redis
 	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr: redisConfig.Addr,
 	})
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
@@ -98,7 +100,10 @@ func initUser(db *gorm.DB) *web.UserHandler {
 }
 
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook?charset=utf8mb4&parseTime=True&loc=Local"))
+
+	var dbConfig = config.K8sConfig.DB
+	db, err := gorm.Open(mysql.Open(dbConfig.DSN))
+
 	if err != nil {
 		panic(err)
 	}

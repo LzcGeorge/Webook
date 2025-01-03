@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webook-mysql
+spec:
+  selector:
+    app: webook-mysql
+  ports:
+    - protocol: TCP
+      # 服务端口, 外部访问的端口
+      port: 11309
+      # 容器端口, 容器内部监听的端口
+      targetPort: 3306
+      # type 为 NodePort 时, 需要指定 nodePort
+      # 指定 nodePort 后, 可以通过 nodeIP:nodePort 访问服务
+      nodePort: 30002
+  type: NodePort
+  

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webook-mysql
+  labels:
+    app: webook-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webook-mysql
+  template:
+    metadata:
+      name: webook-mysql
+      labels:
+        app: webook-mysql
+    spec:
+      containers:
+        - name: webook-mysql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+          imagePullPolicy: IfNotPresent
+          # 挂载卷：将 mysql 数据持久化到卷中
+          volumeMounts:
+            # 挂载卷路径: mysql 数据存储路径
+            - mountPath: /var/lib/mysql
+              name: mysql-storage
+          ports:
+            - containerPort: 3306
+      restartPolicy: Always
+      # 持久化存储，卷 
+      volumes:
+        - name: mysql-storage
+          # PVC: 持久化卷声明
+          persistentVolumeClaim:
+            claimName: webook-mysql-claim
+        # - name: hadoop-storage
+        #   persistentVolumeClaim:
+        #     claimName: webook-hadoop-claim
+      
