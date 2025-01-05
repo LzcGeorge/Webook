@@ -247,3 +247,27 @@ nodePort (Node 端口):
 - 注意： NodePort 的端口号通常在 30000-32767 之间，并且必须是唯一的。
 - 注意： 使用 NodePort 时，你仍然需要访问 Kubernetes 集群节点来访问服务。它并不直接将端口暴露到互联网上。
 
+### WRK 压测
+
+- 安装 wrk：`brew install wrk`
+- 压测：`wrk -t4 -c100 -d10s -s ./scripts/signup.lua http://localhost:8080/users/signup`
+  - -t4：4 个线程
+  - -c100：100 个连接
+  - -d10s：10 秒
+  - -s ./scripts/signup.lua：lua 脚本
+  - http://localhost:8080/users/signup：请求路径
+
+> 如何在测试中维护登录状态：
+> - 在初始化中模拟登录，拿到对应的登录态的 cookie
+> - 手动登录，复制对应的 cookie，在测试中使用
+
+### Redis 缓存优化
+
+![redis 缓存流程图](img/image-1.png)
+
+查询用户时，先从 Redis 缓存中查询，如果缓存中没有，则从数据库中查询，并将查询结果缓存到 Redis 中。
+- 缓存中的 user 是 domain.User，数据库中的 user 是 dao.User，从数据库查询到 user 后，需要将 dao.User 转换为 domain.User
+- 数据库限流：数据库限流，防止缓存击穿后，数据库压力过大
+- 缓存失败：属于偶发事件，从数据库中查询到用户，但缓存失败，此时我们打日志，做监控，不返回错误。
+
+![redis 缓存结果图](img/image-2.png)

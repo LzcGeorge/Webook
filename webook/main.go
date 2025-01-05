@@ -3,6 +3,7 @@ package main
 import (
 	"Webook/webook/config"
 	"Webook/webook/internal/repository"
+	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/service"
 	"Webook/webook/internal/web"
@@ -26,8 +27,13 @@ import (
 func main() {
 
 	db := initDB()
-	u := initUser(db)
-	server := initWebServer(u)
+	// 初始化 Redis
+	var redisConfig = config.Config.Redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: redisConfig.Addr,
+	})
+	u := initUser(db, redisClient)
+	server := initWebServer(redisClient)
 
 	u.RegisterRoutes(server.Group("/users"))
 
@@ -39,14 +45,11 @@ func main() {
 	_ = server.Run(":8080") // listen and serve on 8080
 }
 
-func initWebServer(u *web.UserHandler) *gin.Engine {
+func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 	server := gin.Default()
 
-	// 限流，使用 k8s 环境
-	var redisConfig = config.K8sConfig.Redis
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: redisConfig.Addr,
-	})
+	// 限流
+
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
 	// middleware: 跨域请求
@@ -91,17 +94,17 @@ func initWebServer(u *web.UserHandler) *gin.Engine {
 	return server
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
+func initUser(db *gorm.DB, redisClient redis.Cmdable) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(ud)
+	uc := cache.NewUserCache(redisClient)
+	repo := repository.NewUserRepository(ud, uc)
 	svc := service.NewUserService(repo)
 	u := web.NewUserHandler(svc)
 	return u
 }
 
 func initDB() *gorm.DB {
-
-	var dbConfig = config.K8sConfig.DB
+	var dbConfig = config.Config.DB // 也可以使用 k8s 的配置
 	db, err := gorm.Open(mysql.Open(dbConfig.DSN))
 
 	if err != nil {

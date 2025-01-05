@@ -200,8 +200,12 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 	// 在页面上显示 hello world
 	sess := sessions.Default(ctx)
 	userId := sess.Get("userId")
-
-	ctx.String(http.StatusOK, "hello world, userId: %d", userId)
+	user, err := u.svc.Profile(ctx, userId.(int64))
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "系统错误")
+		return
+	}
+	ctx.String(http.StatusOK, "hello world, %+v", user)
 
 }
 
@@ -212,6 +216,12 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		return
 	}
 	userClaims := claims.(*UserClaims)
-	println(userClaims.UserId)
-	ctx.String(http.StatusOK, "jwt userId: %d", userClaims.UserId)
+
+	userId := userClaims.UserId
+	user, err := u.svc.Profile(ctx, userId)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "系统错误")
+		return
+	}
+	ctx.String(http.StatusOK, "hello world, %+v", user)
 }
