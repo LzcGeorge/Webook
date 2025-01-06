@@ -12,9 +12,8 @@ Webook小微书（仿小红书）
 - 数据库：在 webook 目录下，执行 `docker compose up`
   - 执行 `docker compose down` 会删除数据库，结束 `docker compose up` 进程不会
 
-## 流程记录
 
-### 注册功能
+## 注册功能
 
 1. Bind 绑定请求参数，绑定到结构体 UserSignUpReq
 2. 用正则表达式校验邮箱和密码格式
@@ -50,7 +49,7 @@ Webook小微书（仿小红书）
 > - Repository: 数据存储
 > - Service: 业务逻辑
 
-### 登录功能
+## 登录功能
 
 登录功能分为两件事：
 - 实现登录功能
@@ -110,7 +109,7 @@ Webook小微书（仿小红书）
 > - 限流，采用滑动窗口算法：一分钟内最多 100 次请求- 
 > - 检查 userAgent 是否一致
 
-### Kubernets 入门
+## Kubernets 入门
 
 Pod: 实例
 Service: 服务
@@ -247,7 +246,7 @@ nodePort (Node 端口):
 - 注意： NodePort 的端口号通常在 30000-32767 之间，并且必须是唯一的。
 - 注意： 使用 NodePort 时，你仍然需要访问 Kubernetes 集群节点来访问服务。它并不直接将端口暴露到互联网上。
 
-### WRK 压测
+## WRK 压测
 
 - 安装 wrk：`brew install wrk`
 - 压测：`wrk -t4 -c100 -d10s -s ./scripts/signup.lua http://localhost:8080/users/signup`
@@ -271,3 +270,47 @@ nodePort (Node 端口):
 - 缓存失败：属于偶发事件，从数据库中查询到用户，但缓存失败，此时我们打日志，做监控，不返回错误。
 
 ![redis 缓存结果图](img/image-2.png)
+
+## 短信验证码登录
+
+![短信验证码登录流程图](img/image-3.png)
+
+### 需求分析
+
+参考竞品：参考别人的实现
+
+从不同角度分析：
+- 功能角度：具体做到哪些功能，不同功能的优先级
+- 非功能角度：
+  
+  1. 安全性：保证系统不会被人恶意搞崩
+  2. 扩展性：应对未来的需求变化，这很关键
+  3. 性能：优化用户体验
+
+- 从正常和异常流程两个角度思考
+
+### 系统设计
+
+手机验证码登录有两件事：验证码，登录
+- 两个是强耦合吗？
+- 其他业务会用到吗？
+
+![短信验证码登录系统设计](img/image-4.png)
+
+模块划分：
+- 一个独立的短信发送服务
+- 在独立的短信发送服务的基础上，封装一个验证码功能
+- 在验证码功能的基础上，封装一个登录功能
+
+设计原则：
+- 类 A 需要使用类 B 的功能，那么 A 应该依赖于一个接口（例如 BInterface），而不是直接依赖于类 B 本身。
+- 如果 A 需要使用 B，那么 B 应该作为 A 的字段（成员变量）存在，而不是作为包变量或包方法。
+- A 用到了 B，A 绝对不初始化 B，而是外面注入 => 保持依赖注入(DI) 和 依赖反转(IoC)
+
+cache/dao 中的 err 定义（ `var ErrCodeNotFound = errors.New("code not found")`），在 repository 中使用时，要再次定义 （`var ErrCodeNotFound = cache.ErrCodeNotFound`），在 Service 中用 `repo.ErrCodeNotFound` 来使用。
+- 解耦层级依赖，每个层级都知道自己可能抛出的错误，并处理这些错误
+- 通过将错误变量定义在相关层级中，可以更清晰地了解每个层级的行为和可能发生的错误。
+
+
+发验证码的并发问题，引入 lua 脚本，解决并发问题
+![alt text](img/image-5.png)
