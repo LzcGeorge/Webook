@@ -6,9 +6,11 @@ import (
 	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/service"
+	"Webook/webook/internal/service/sms/memory"
 	"Webook/webook/internal/web"
 	"Webook/webook/internal/web/middleware"
 	"Webook/webook/pkg/ginx/middlewares/ratelimit"
+
 	"net/http"
 	"strings"
 	"time"
@@ -90,17 +92,26 @@ func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 	// 	Build())
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/login", "/users/signup").
+		IgnorePaths("/users/login_sms/code/send", "/users/login_sms").
 		Build())
 	return server
 }
 
 func initUser(db *gorm.DB, redisClient redis.Cmdable) *web.UserHandler {
-	ud := dao.NewUserDAO(db)
-	uc := cache.NewUserCache(redisClient)
-	repo := repository.NewUserRepository(ud, uc)
-	svc := service.NewUserService(repo)
-	u := web.NewUserHandler(svc)
-	return u
+	// 用户基本操作：注册、登录、获取用户信息
+	userDao := dao.NewUserDAO(db)
+	userCache := cache.NewUserCache(redisClient)
+	userRepo := repository.NewUserRepository(userDao, userCache)
+	userSvc := service.NewUserService(userRepo)
+
+	// 验证码
+	codeCache := cache.NewCodeCache(redisClient)
+	codeRepo := repository.NewCodeRepository(codeCache)
+	smsSvc := memory.NewService() // 采用 memory 作为 sms 的实现
+	codeSvc := service.NewCodeService(codeRepo, smsSvc)
+
+	user := web.NewUserHandler(userSvc, codeSvc)
+	return user
 }
 
 func initDB() *gorm.DB {

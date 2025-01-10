@@ -19,7 +19,7 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 	}
 }
 
-var ErrUserDuplicateEmail = repository.ErrUserDuplicateEmail
+var ErrUserDuplicate = repository.ErrUserDuplicate
 
 func (svc *UserService) SignUp(ctx context.Context, user domain.User) error {
 	// 加密密码
@@ -64,4 +64,26 @@ func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, err
 	}
 
 	return user, nil
+}
+
+func (svc *UserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	user, err := svc.repo.FindByPhone(ctx, phone)
+
+	// 用户存在，直接返回
+	if err != repository.ErrUserNotFound {
+		return user, nil
+	}
+
+	// 用户不存在，创建用户
+	err = svc.repo.Create(ctx, domain.User{
+		Phone: phone,
+	})
+	if err != nil && err != repository.ErrUserDuplicate {
+		return domain.User{}, err
+	}
+
+	// 根据 phone 查询刚创建的用户
+	// 这里会碰到主从延迟的问题，可能查询不到（
+	user, err = svc.repo.FindByPhone(ctx, phone)
+	return user, err
 }

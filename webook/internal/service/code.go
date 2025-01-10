@@ -10,9 +10,21 @@ import (
 
 const codeTplId = "1877556"
 
+var (
+	ErrCodeSendTooFrequent    = repository.ErrCodeSendTooFrequent
+	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
+)
+
 type CodeService struct {
 	repo   *repository.CodeRepository
-	smsSvc *sms.Service
+	smsSvc sms.Service
+}
+
+func NewCodeService(repo *repository.CodeRepository, smsSvc sms.Service) *CodeService {
+	return &CodeService{
+		repo:   repo,
+		smsSvc: smsSvc,
+	}
 }
 
 // Send 发送验证码: biz 业务名称，phone 手机号
@@ -33,10 +45,8 @@ func (svc *CodeService) Send(ctx context.Context, biz string, phone string) erro
 }
 
 // Verify 验证验证码: biz 业务名称，phone 手机号，inputCode 输入的验证码
-func (svc *CodeService) Verify(ctx context.Context, biz string,
-	phone string, inputCode string) (bool, error) {
-
-	return false, nil
+func (svc *CodeService) Verify(ctx context.Context, biz, phone, inputCode string) (bool, error) {
+	return svc.repo.Verify(ctx, biz, phone, inputCode)
 }
 
 func (svc *CodeService) generateCode() string {

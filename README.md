@@ -314,3 +314,23 @@ cache/dao 中的 err 定义（ `var ErrCodeNotFound = errors.New("code not found
 
 发验证码的并发问题，引入 lua 脚本，解决并发问题
 ![alt text](img/image-5.png)
+
+引入手机号登录后，需要修改 dao 层，添加 phone 字段
+- 在邮箱登录时，phone 字段为空
+- 在手机号登录时，email 字段为空
+- 但是 email 和 phone 字段都是唯一索引
+
+解决方法，采用 `sql.NullString` 类型，允许空值
+- 在邮箱登录时，phone 字段为空
+- 在手机号登录时，email 字段为空
+- 但是 email 和 phone 字段都是唯一索引
+
+### sms 登录校验
+
+1. 通过手机号查询用户是否存在
+2. 用户不存在，创建用户
+  - 创建一个用户
+  - 根据手机号查询刚创建的用户
+  - 存在主从延迟的问题，可能查询不到
+3. 用户存在，直接返回
+4. 返回用户信息

@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 
