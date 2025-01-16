@@ -334,3 +334,19 @@ cache/dao 中的 err 定义（ `var ErrCodeNotFound = errors.New("code not found
   - 存在主从延迟的问题，可能查询不到
 3. 用户存在，直接返回
 4. 返回用户信息
+
+## 面向接口编程
+
+面向接口编程，是为了 **扩展性**，而不是为了提高性能或者可靠性。
+
+![面向接口编程](img/image-6.png)
+
+从结构体到接口：
+
+- 左侧的代码使用 struct 定义 UserService，这意味着它是一个具体类型。任何使用 UserService 的地方都直接依赖于这个具体的实现。
+- 右侧的代码定义了一个 UserService 接口，它定义了 SignUp、Login、Profile 和 FindOrCreate 这几个方法，而 UserServiceStruct 则是一个实现了这个接口的具体结构体。
+
+构造函数的变化：
+
+- 左侧构造函数返回 *UserService，即 UserService 结构体的指针。
+- 右侧构造函数返回 UserService 接口，而不是具体的结构体。

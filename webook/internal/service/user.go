@@ -9,19 +9,26 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService struct {
-	repo *repository.UserRepository
+type UserService interface {
+	SignUp(ctx context.Context, user domain.User) error
+	Login(ctx context.Context, email, password string) (domain.User, error)
+	Profile(ctx context.Context, id int64) (domain.User, error)
+	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
-	return &UserService{
+type UserServiceStruct struct {
+	repo repository.UserRepository
+}
+
+func NewUserService(repo repository.UserRepository) UserService {
+	return &UserServiceStruct{
 		repo: repo,
 	}
 }
 
 var ErrUserDuplicate = repository.ErrUserDuplicate
 
-func (svc *UserService) SignUp(ctx context.Context, user domain.User) error {
+func (svc *UserServiceStruct) SignUp(ctx context.Context, user domain.User) error {
 	// 加密密码
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -35,7 +42,7 @@ func (svc *UserService) SignUp(ctx context.Context, user domain.User) error {
 
 var ErrInvalidUserOrPassword = errors.New("邮箱或密码不对")
 
-func (svc *UserService) Login(ctx context.Context, email, password string) (domain.User, error) {
+func (svc *UserServiceStruct) Login(ctx context.Context, email, password string) (domain.User, error) {
 	// 根据邮箱查询用户是否存在
 	user, err := svc.repo.FindByEmail(ctx, email)
 	if err == repository.ErrUserNotFound {
@@ -57,7 +64,7 @@ func (svc *UserService) Login(ctx context.Context, email, password string) (doma
 	return user, nil
 }
 
-func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, error) {
+func (svc *UserServiceStruct) Profile(ctx context.Context, id int64) (domain.User, error) {
 	user, err := svc.repo.FindById(ctx, id)
 	if err != nil {
 		return domain.User{}, err
@@ -66,7 +73,7 @@ func (svc *UserService) Profile(ctx context.Context, id int64) (domain.User, err
 	return user, nil
 }
 
-func (svc *UserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+func (svc *UserServiceStruct) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
 	user, err := svc.repo.FindByPhone(ctx, phone)
 
 	// 用户存在，直接返回
