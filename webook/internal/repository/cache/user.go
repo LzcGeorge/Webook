@@ -15,6 +15,7 @@ var ErrKeyNotFound = redis.Nil
 type UserCache interface {
 	Get(ctx context.Context, id int64) (domain.User, error)
 	Set(ctx context.Context, user domain.User) error
+	Del(ctx context.Context, id int64) error
 }
 
 type RedisUserCache struct {
@@ -55,4 +56,9 @@ func (cache *RedisUserCache) Set(ctx context.Context, user domain.User) error {
 
 func (cache *RedisUserCache) key(id int64) string {
 	return fmt.Sprintf("user:info:id:%d", id)
+}
+
+func (cache *RedisUserCache) Del(ctx context.Context, id int64) error {
+	key := cache.key(id)
+	return cache.client.Del(ctx, key).Err()
 }

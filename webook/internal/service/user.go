@@ -14,6 +14,7 @@ type UserService interface {
 	Login(ctx context.Context, email, password string) (domain.User, error)
 	Profile(ctx context.Context, id int64) (domain.User, error)
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
+	Edit(ctx context.Context, user domain.User) error
 }
 
 type UserServiceStruct struct {
@@ -93,4 +94,8 @@ func (svc *UserServiceStruct) FindOrCreate(ctx context.Context, phone string) (d
 	// 这里会碰到主从延迟的问题，可能查询不到（
 	user, err = svc.repo.FindByPhone(ctx, phone)
 	return user, err
+}
+
+func (svc *UserServiceStruct) Edit(ctx context.Context, user domain.User) error {
+	return svc.repo.UpdateById(ctx, user)
 }

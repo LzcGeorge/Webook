@@ -20,6 +20,7 @@ type UserDAO interface {
 	FindByEmail(ctx context.Context, email string) (User, error)
 	FindByPhone(ctx context.Context, phone string) (User, error)
 	FindById(ctx context.Context, id int64) (User, error)
+	UpdateById(ctx context.Context, user User) error
 }
 
 type GormUserDAO struct {
@@ -38,6 +39,12 @@ type User struct {
 	// 创建和修改时间，毫秒时间戳
 	Ctime int64
 	Utime int64
+
+	// 用户信息
+	Nickname string
+	Birthday time.Time `gorm:"default:1992-02-03 00:00:00.000"`
+
+	AboutMe string
 }
 
 func NewUserDAO(db *gorm.DB) *GormUserDAO {
@@ -83,4 +90,9 @@ func (dao *GormUserDAO) FindByPhone(ctx context.Context, phone string) (User, er
 	var user User
 	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&user).Error
 	return user, err
+}
+
+func (dao *GormUserDAO) UpdateById(ctx context.Context, user User) error {
+	user.Utime = time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Model(&user).Where("id = ?", user.Id).Updates(user).Error
 }

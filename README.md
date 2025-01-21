@@ -350,3 +350,24 @@ cache/dao 中的 err 定义（ `var ErrCodeNotFound = errors.New("code not found
 
 - 左侧构造函数返回 *UserService，即 UserService 结构体的指针。
 - 右侧构造函数返回 UserService 接口，而不是具体的结构体。
+
+## Profile 接口
+
+Web 层：
+- 获取 JWT 中的用户信息
+- 调用 Service 层获取用户信息
+- 返回用户信息
+
+Service 层：
+- 调用 Repository 层的 FindById 方法获取用户信息
+- 返回用户信息
+
+Repository 层：
+- 从缓存中获取用户信息
+- 缓存中没有，从数据库中获取
+- 将 dao.User 转换为 domain.User ：添加个人信息字段
+  - 将 domain.User 转换为 cache.User ：添加个人信息字段
+- 将 domain.User 缓存到 Redis 中
+- 返回用户信息
+
+Edit 接口与 Profile 接口的类似，但 Edit 接口在 repo 层需要更新缓存（先删除，再创建）。

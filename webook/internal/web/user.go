@@ -25,7 +25,7 @@ func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/signup", u.SignUp)
 	// ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginJWT)
-	ug.PUT("/edit", u.Edit)
+	ug.POST("/edit", u.EditJWT)
 	// ug.GET("/profile", u.Profile)
 	ug.GET("/profile", u.ProfileJWT)
 	ug.POST("/login_sms/code/send", u.LoginSMSCodeSend)
@@ -155,7 +155,7 @@ func (u *UserHandler) setJWTToken(ctx *gin.Context, uid int64) {
 	// claims 中存储用户的信息
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			// 设置 token 的过期时间: 1 分钟
+			// 设置 token 的过期时间: 1 分钟（和 lua 代码中的过期时间一致）
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
 		UserId:    uid,
@@ -201,8 +201,49 @@ func (u *UserHandler) Logout(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "退出登录")
 }
 
-func (u *UserHandler) Edit(ctx *gin.Context) {
+type EditReq struct {
+	Nickname string `json:"nickname"`
+	Birthday string `json:"birthday"`
+	AboutMe  string `json:"aboutMe"`
+}
 
+func (u *UserHandler) Edit(ctx *gin.Context) {
+}
+func (u *UserHandler) EditJWT(ctx *gin.Context) {
+	print("edit jwt")
+	var req EditReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	userClaims := claims.(*UserClaims)
+	userId := userClaims.UserId
+
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		ctx.String(http.StatusOK, "生日格式错误")
+		return
+	}
+
+	// 调用 service 层进行编辑
+	user := domain.User{
+		Id:       userId,
+		Nickname: req.Nickname,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	}
+	err = u.svc.Edit(ctx, user)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Msg: "系统错误"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "编辑成功"})
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
@@ -218,7 +259,16 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 
 }
 
+type ProfileJWTResp struct {
+	Email    string `json:"Email"`
+	Phone    string `json:"Phone"`
+	Nickname string `json:"Nickname"`
+	Birthday string `json:"Birthday"`
+	AboutMe  string `json:"AboutMe"`
+}
+
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	// 获取 JWT 中的用户信息
 	claims, ok := ctx.Get("claims")
 	if !ok {
 		ctx.String(http.StatusOK, "系统错误")
@@ -226,16 +276,24 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 	}
 	userClaims := claims.(*UserClaims)
 
+	// 获取用户信息
 	userId := userClaims.UserId
 	user, err := u.svc.Profile(ctx, userId)
 	if err != nil {
 		ctx.String(http.StatusBadRequest, "系统错误")
 		return
 	}
-	ctx.JSON(http.StatusOK, Result{
-		Msg:  "登录成功",
-		Data: user,
-	})
+
+	// 返回用户信息
+	ctx.JSON(http.StatusOK,
+		&ProfileJWTResp{
+			Email:    user.Email,
+			Phone:    user.Phone,
+			Nickname: user.Nickname,
+			Birthday: user.Birthday.Format(time.DateOnly),
+			AboutMe:  user.AboutMe,
+		},
+	)
 }
 
 type LoginSMSCodeSendReq struct {

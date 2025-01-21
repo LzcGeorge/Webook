@@ -14,6 +14,7 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 	FindById(ctx context.Context, id int64) (domain.User, error)
+	UpdateById(ctx context.Context, user domain.User) error
 }
 type CachedUserRepository struct {
 	dao   dao.UserDAO
@@ -50,7 +51,7 @@ func (repo *CachedUserRepository) FindById(ctx context.Context, id int64) (domai
 	user, err := repo.cache.Get(ctx, id)
 	if err == nil {
 		// 从缓存中获取到用户
-		// println("从缓存中获取到用户,userID: ", id)
+		println("从缓存中获取到用户,userID: ", id)
 		return user, nil
 	}
 
@@ -85,6 +86,11 @@ func (repo *CachedUserRepository) entityToDomain(user dao.User) domain.User {
 		Phone:    user.Phone.String,
 		Password: user.Password,
 		Ctime:    time.UnixMilli(user.Ctime),
+
+		// 用户信息
+		Nickname: user.Nickname,
+		Birthday: user.Birthday,
+		AboutMe:  user.AboutMe,
 	}
 }
 
@@ -95,5 +101,20 @@ func (repo *CachedUserRepository) domainToEntity(user domain.User) dao.User {
 		Phone:    sql.NullString{String: user.Phone, Valid: user.Phone != ""},
 		Password: user.Password,
 		Ctime:    user.Ctime.UnixMilli(),
+
+		// 用户信息
+		Nickname: user.Nickname,
+		Birthday: user.Birthday,
+		AboutMe:  user.AboutMe,
 	}
+}
+
+func (repo *CachedUserRepository) UpdateById(ctx context.Context, user domain.User) error {
+	_, err := repo.cache.Get(ctx, user.Id)
+	if err == nil {
+		// 缓存中存在这个数据, 删除缓存
+		_ = repo.cache.Del(ctx, user.Id)
+	}
+	entity := repo.domainToEntity(user)
+	return repo.dao.UpdateById(ctx, entity)
 }

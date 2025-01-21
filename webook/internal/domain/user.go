@@ -9,4 +9,9 @@ type User struct {
 	Phone    string
 	Password string
 	Ctime    time.Time
+
+	// 用户信息
+	Nickname string
+	Birthday time.Time
+	AboutMe  string
 }
