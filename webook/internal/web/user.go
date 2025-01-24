@@ -58,7 +58,8 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 	var req SignUpReq
 
 	// Bind 会按照 Content-Type 来解析上下文中的数据到 req 中
-	if err := ctx.Bind(&req); err != nil {
+	err := ctx.Bind(&req)
+	if err != nil {
 		return
 	}
 
@@ -104,7 +105,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	ctx.String(http.StatusOK, "user signup")
+	ctx.String(http.StatusOK, "注册成功")
 }
 
 type LoginReq struct {

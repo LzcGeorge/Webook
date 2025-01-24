@@ -371,3 +371,88 @@ Repository 层：
 - 返回用户信息
 
 Edit 接口与 Profile 接口的类似，但 Edit 接口在 repo 层需要更新缓存（先删除，再创建）。
+
+## 单元测试
+
+单元测试：针对每一个方法进行的测试，单独验证每一个方法的正确性。
+- 理论上来说，你不能依赖任何第三方组件，包括数据库、缓存、外部服务等 
+
+集成测试：多个组件合并在一起的测试，验证各个方法、组件之间的配合无误。
+
+![Table Driven Test](img/image-7.png)
+
+测试用例定义：
+
+![测试用例定义](img/image-8.png)
+
+使用 mock 
+
+![使用 mock](img/image-9.png)
+
+1. 安装 mockgen 工具：`go install github.com/golang/mock/mockgen@latest`
+2. 为 UserHandler 依赖的 UserService 生成 mock 实现：`mockgen -source=./webook/internal/service/user.go -destination=./webook/internal/service/mocks/user.go -package=svcmocks`
+3. 测试用例匿名结构体定义。
+4. 执行测试用例的整体代码
+5. 设计具体测试用例并运行：
+   - 最开始考虑正常流程
+   - 在正常流程的基础上考虑异常流程。
+
+测试用例定义示例：
+```go
+testCases := []struct {
+  name     string
+  mock     func(ctrl *gomock.Controller) service.UserService
+  reqBody  string
+  wantCode int
+  wantBody string
+}{
+  // 注册成功
+  {
+    name: "注册成功",
+    // 模拟依赖：返回一个 mock 的 UserService
+    mock: func(ctrl *gomock.Controller) service.UserService {
+      userSvc := svcmocks.NewMockUserService(ctrl)
+      // 期待调用 SignUp 方法，传入任意 context 和匹配的 domain.User 对象，返回 nil
+      userSvc.EXPECT().SignUp(gomock.Any(), domain.User{
+        Email:    "123@qq.com",
+        Password: "1234#qwe",
+      }).Return(nil)
+      return userSvc
+    },
+    // 请求参数
+    reqBody: `{"email":"123@qq.com","password":"1234#qwe","confirmPassword":"1234#qwe"}`,
+    // 期望响应
+    wantCode: http.StatusOK,
+    wantBody: "注册成功",
+  },
+}
+```
+
+执行测试用例：
+```go
+for _, tc := range testCases {
+  t.Run(tc.name, func(t *testing.T) {
+    ctrl := gomock.NewController(t)
+    defer ctrl.Finish()
+
+    // 创建 userHandler 及所需的依赖 userService
+    server := gin.Default()
+    userSvc := tc.mock(ctrl)
+    userHandler := NewUserHandler(userSvc, nil)
+    userHandler.RegisterRoutes(server.Group("/users"))
+
+    // 创建请求
+    req, err := http.NewRequest(http.MethodPost, "/users/signup", bytes.NewBuffer([]byte(tc.reqBody)))
+    req.Header.Set("Content-Type", "application/json")
+    assert.Nil(t, err)
+
+    // 执行请求
+    resp := httptest.NewRecorder()
+    server.ServeHTTP(resp, req)
+
+    // 检查响应
+    assert.Equal(t, tc.wantCode, resp.Code)
+    assert.Equal(t, tc.wantBody, resp.Body.String())
+  })
+}
+```
