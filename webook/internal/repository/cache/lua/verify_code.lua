@@ -6,7 +6,7 @@ local code = redis.call("get", key)
 local cntKey = key..":cnt"
 local cnt = tonumber(redis.call("get", cntKey))
 
-if cnt <= 0 then
+if cnt == nil or cnt <= 0 then
     -- 重试次数超过 3 次
     return -1
 elseif code == inputCode then
