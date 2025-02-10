@@ -4,7 +4,7 @@ Webook小微书（仿小红书）
 
 - DDD 框架：Domin-Drive Design
 
-    ![image-20241226202631481](./assets/image-20241226202631481.png)
+    ![image-20241226202631481](./img/image-20241226202631481.png)
 
 项目启动：
 - 前端：在 webook-fe 目录下，执行 `npm run dev`
@@ -458,3 +458,72 @@ for _, tc := range testCases {
 ```
 
 ![codeService 单测](img/image-10.png)
+
+## 高可用的短信服务
+
+抽象接口：定义了统一的短信服务接口
+
+### 客户端限流
+
+```go
+//go:embed slide_window.lua
+var luaSlideWindow string
+
+// RedisSlideWindowLimiter 基于 Redis 的滑动窗口限流器
+type RedisSlideWindowLimiter struct {
+	cmd redis.Cmdable
+	// 窗口大小
+	interval time.Duration
+	// 阈值
+	rate int
+}
+
+func (r *RedisSlideWindowLimiter) Limit(ctx context.Context, key string) (bool, error) {
+	return r.cmd.Eval(ctx, luaSlideWindow, []string{key},
+		r.interval.Milliseconds(), r.rate, time.Now().UnixMilli()).Bool()
+}
+```
+
+采用装饰器模式，对短信服务进行限流。
+
+- 装饰器模式：不改变原有实现而增加新特性的一种设计模式
+
+![image-20250206143716981](./img/image-20250206143716981.png)
+
+### failover 策略
+
+自动切换短信服务商
+
+- 轮询：出现错误，就换一个服务商进行重试
+- 基于超时相应的判定：连续超过 N 个请求超时，切换服务商。
+
+### 提高安全性
+
+增加了 JWT Token 的验证。
+
+```go
+type AuthSMSService struct {
+	svc sms.Service
+	key []byte
+}
+
+type AuthSMSClaims struct {
+	jwt.RegisteredClaims
+	Tpl string
+}
+
+func (s *AuthSMSService) Send(ctx context.Context, tplToken string, args []string, numbers ...string) error {
+	var claims AuthSMSClaims
+	_, err := jwt.ParseWithClaims(tplToken, &claims, func(t *jwt.Token) (interface{}, error) {
+		return s.key, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return s.svc.Send(ctx, claims.Tpl, args, numbers...)
+}
+```
+
+
+

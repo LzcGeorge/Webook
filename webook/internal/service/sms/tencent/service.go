@@ -1,6 +1,7 @@
 package tencent
 
 import (
+	"Webook/webook/pkg/ratelimit"
 	"context"
 	"fmt"
 
@@ -13,7 +14,7 @@ type Service struct {
 	client   *sms.Client
 }
 
-func NewService(c *sms.Client, appId, signName string) *Service {
+func NewService(c *sms.Client, appId, signName string, limiter ratelimit.Limiter) *Service {
 	return &Service{
 		appId:    &appId,
 		signName: &signName,
