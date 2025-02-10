@@ -6,10 +6,11 @@ import (
 	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/service"
+	"Webook/webook/internal/service/oauth2/wechat"
 	"Webook/webook/internal/service/sms/memory"
 	"Webook/webook/internal/web"
 	"Webook/webook/internal/web/middleware"
-	"Webook/webook/pkg/ginx/middlewares/ratelimit"
+	"os"
 
 	"net/http"
 	"strings"
@@ -28,20 +29,28 @@ import (
 
 func main() {
 
+	// 初始化数据库
 	db := initDB()
+
 	// 初始化 Redis
 	var redisConfig = config.Config.Redis
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: redisConfig.Addr,
 	})
-	u := initUser(db, redisClient)
+
+	// 初始化 user service
+	user, userSvc := initUser(db, redisClient)
 	server := initWebServer(redisClient)
+	user.RegisterRoutes(server.Group("/users"))
 
-	u.RegisterRoutes(server.Group("/users"))
+	// 配置微信扫码登录
+	wechatSvc := InitWechatService()
+	wechatHandler := web.NewOAuth2WechatHandler(wechatSvc, userSvc)
+	wechatHandler.RegisterRoutes(server.Group("/oauth2/wechat"))
 
-	// server := gin.Default()
+	// 测试
 	server.GET("/hello", func(ctx *gin.Context) {
-		ctx.String(http.StatusOK, "Hello, Kubernetes!")
+		ctx.String(http.StatusOK, "Hello, Webook!")
 	})
 
 	_ = server.Run(":8080") // listen and serve on 8080
@@ -50,54 +59,28 @@ func main() {
 func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 	server := gin.Default()
 
-	// 限流
-
-	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
+	// TODO: 限流，抽象接口了，需要修改
+	// server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
 	// middleware: 跨域请求
-	server.Use(cors.New(cors.Config{
-		AllowHeaders: []string{"Content-Type", "Authorization"},
-		// 暴露给前端，前端可以从 Header 中获取
-		ExposeHeaders: []string{"x-jwt-token"},
-		// 允许跨域请求携带 cookie
-		AllowCredentials: true,
-		AllowOriginFunc: func(origin string) bool {
-			if strings.HasPrefix(origin, "http://localhost") {
-				// 本地开发环境
-				return true
-			}
-			return strings.Contains(origin, "yourcompany.com")
-		},
-		MaxAge: 12 * time.Hour,
-	}))
+	server.Use(cors.New(newCORSConfig()))
 
 	// middleware：获取 sessionID，校验登录状态
 	// 使用 memstore 作为 session 的存储
 	store := memstore.NewStore([]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"), []byte("JKK0iptdv10H1HnVP6mVCk2HDi8WjAKH"))
-
-	// 使用 cookie 作为 session 的存储
-	// store := cookie.NewStore([]byte("secret"))
-
-	// 使用 redis 作为 session 的存储
-	// store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
-	// 	// authentication 和 encryption 的密钥
-	// 	[]byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"), []byte("JKK0iptdv10H1HnVP6mVCk2HDi8WjAKH"))
-	// if err != nil {
-	// 	panic(err)
-	// }
-
 	server.Use(sessions.Sessions("mysession", store))
-	// server.Use(middleware.NewLoginMiddlewareBuilder().
-	// 	IgnorePaths("/users/login", "/users/signup").
-	// 	Build())
+
+	// 忽略登录状态的请求
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/login", "/users/signup").
 		IgnorePaths("/users/login_sms/code/send", "/users/login_sms").
+		IgnorePaths("/oauth2/wechat/authurl", "/oauth2/wechat/callback").
 		Build())
+
 	return server
 }
 
-func initUser(db *gorm.DB, redisClient redis.Cmdable) *web.UserHandler {
+func initUser(db *gorm.DB, redisClient redis.Cmdable) (*web.UserHandler, service.UserService) {
 	// 用户基本操作：注册、登录、获取用户信息
 	userDao := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(redisClient)
@@ -111,7 +94,7 @@ func initUser(db *gorm.DB, redisClient redis.Cmdable) *web.UserHandler {
 	codeSvc := service.NewCodeService(codeRepo, smsSvc)
 
 	user := web.NewUserHandler(userSvc, codeSvc)
-	return user
+	return user, userSvc
 }
 
 func initDB() *gorm.DB {
@@ -126,4 +109,34 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+
+func InitWechatService() wechat.Service {
+	appID, ok := os.LookupEnv("WECHAT_APP_ID")
+	if !ok {
+		panic("找不到环境变量 WECHAT_APP_ID")
+	}
+	appSecret, ok := os.LookupEnv("WECHAT_APP_SECRET")
+	if !ok {
+		panic("找不到环境变量 WECHAT_APP_SECRET")
+	}
+	return wechat.NewService(appID, appSecret)
+}
+
+func newCORSConfig() cors.Config {
+	return cors.Config{
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+		// 暴露给前端，前端可以从 Header 中获取
+		ExposeHeaders: []string{"x-jwt-token"},
+		// 允许跨域请求携带 cookie
+		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			if strings.HasPrefix(origin, "http://localhost") {
+				// 本地开发环境
+				return true
+			}
+			return strings.Contains(origin, "yourcompany.com")
+		},
+		MaxAge: 12 * time.Hour,
+	}
 }

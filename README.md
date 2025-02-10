@@ -525,5 +525,15 @@ func (s *AuthSMSService) Send(ctx context.Context, tplToken string, args []strin
 }
 ```
 
+## 微信扫码登录
+
+微信扫码登录是轻轻屁微信 OAuth2.0 授权登录。
+
+请求 Code（临时授权码）
+- 发起授权: 用户点击“微信登录”按钮，应用程序将用户重定向至微信的授权页面。
+- 构造授权链接: 重定向 URL 包含微信授权页面的地址，以及应用程序的 appid、redirect_uri（回调地址）和 state（状态参数）。 redirect_uri 必须进行 URL 编码。 state 用于防止 CSRF 攻击，应生成随机唯一的值。
+- 用户授权: 用户在微信授权页面完成扫码登录并授权。
+- 微信回调: 微信将用户重定向回 redirect_uri，并在 URL 参数中包含 code（临时授权码）和 state。
+- 后端处理: 后端服务器接收到回调请求 callback，验证 state 参数，然后提取 code。 后端使用此 code 向微信服务器请求 Access Token，OpenID 和 UnionID, 然后通过 OpenID 和 UnionID 查询用户信息。
 
 
