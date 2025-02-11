@@ -26,6 +26,7 @@ func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService) *OA
 		userSvc:         userSvc,
 		key:             []byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"),
 		stateCookieName: "jwt_state",
+		jwtHandler:      NewJWTHandler(),
 	}
 }
 

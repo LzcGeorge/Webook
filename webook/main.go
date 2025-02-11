@@ -75,6 +75,7 @@ func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 		IgnorePaths("/users/login", "/users/signup").
 		IgnorePaths("/users/login_sms/code/send", "/users/login_sms").
 		IgnorePaths("/oauth2/wechat/authurl", "/oauth2/wechat/callback").
+		IgnorePaths("/users/refresh_token").
 		Build())
 
 	return server
@@ -114,11 +115,13 @@ func initDB() *gorm.DB {
 func InitWechatService() wechat.Service {
 	appID, ok := os.LookupEnv("WECHAT_APP_ID")
 	if !ok {
-		panic("找不到环境变量 WECHAT_APP_ID")
+		// panic("找不到环境变量 WECHAT_APP_ID")
+		appID = "wx6666666666666666"
 	}
 	appSecret, ok := os.LookupEnv("WECHAT_APP_SECRET")
 	if !ok {
-		panic("找不到环境变量 WECHAT_APP_SECRET")
+		// panic("找不到环境变量 WECHAT_APP_SECRET")
+		appSecret = "66666666666666666666666666666666"
 	}
 	return wechat.NewService(appID, appSecret)
 }
@@ -127,7 +130,7 @@ func newCORSConfig() cors.Config {
 	return cors.Config{
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 		// 暴露给前端，前端可以从 Header 中获取
-		ExposeHeaders: []string{"x-jwt-token"},
+		ExposeHeaders: []string{"x-jwt-token", "x-refresh-token"},
 		// 允许跨域请求携带 cookie
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {

@@ -11,7 +11,7 @@ Webook小微书（仿小红书）
 - 后端：在 webook 目录下，执行 `go run main.go`
 - 数据库：在 webook 目录下，执行 `docker compose up`
   - 执行 `docker compose down` 会删除数据库，结束 `docker compose up` 进程不会
-
+- mock: 在 Webook 目录下，执行 `make mock`
 
 ## 注册功能
 
@@ -536,4 +536,32 @@ func (s *AuthSMSService) Send(ctx context.Context, tplToken string, args []strin
 - 微信回调: 微信将用户重定向回 redirect_uri，并在 URL 参数中包含 code（临时授权码）和 state。
 - 后端处理: 后端服务器接收到回调请求 callback，验证 state 参数，然后提取 code。 后端使用此 code 向微信服务器请求 Access Token，OpenID 和 UnionID, 然后通过 OpenID 和 UnionID 查询用户信息。
 
+## 长短 token 设计
 
+短 token：access_token, 用于访问资源，有效期短。
+
+长 token：refresh_token, 用于刷新 access_token，有效期长。
+
+### 用户登录
+
+1. 在 setJWTToken 后，生成 refresh_token
+2. 让前端保存 refresh_token
+    - 在 CORSConfig 的 ExposeHeaders 中添加 `x-refresh-token`
+3. 前端每次请求时候，都携带 token
+    - 请求资源时，在 Authorization 中携带 access_token
+    - 调用 RefreshToken 的时候，在 Authorization 中携带 refresh_token，用来生成新的 access_token
+4. 如果 access_token 过期，则调用 RefreshToken 生成新的 access_token, 前端再用新的 access_token 请求资源
+
+![image-20250211194030726](./img/image-20250211194030726.png)
+
+### 用户退出
+
+1. 用户登录的时候，生成一个标识 ssid，并置为有效，放到长短 token 中
+2. 用户登录校验的时候，检查 ssid 是否有效
+    - 
+3. 用户更新长 token 的时候，也要检查 ssid 是否有效
+4. 用户在退出登录的时候，把 ssid 置为无效
+
+
+
+![image-20250211194441615](./img/image-20250211194441615.png)

@@ -10,6 +10,7 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
 )
 
 type UserHandler struct {
@@ -30,6 +31,7 @@ func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.GET("/profile", u.ProfileJWT)
 	ug.POST("/login_sms/code/send", u.LoginSMSCodeSend)
 	ug.POST("/login_sms", u.LoginSMSCodeVerify)
+	ug.POST("/refresh_token", u.RefreshToken)
 }
 
 const (
@@ -45,6 +47,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
 		codeSvc:     codeSvc,
+		jwtHandler:  NewJWTHandler(),
 	}
 }
 
@@ -157,7 +160,14 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	switch err {
 	case nil:
 		// 设置 JWT token，保持登录状态
-		u.setJWTToken(ctx, user.Id)
+		if err := u.setJWTToken(ctx, user.Id); err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+		if err := u.setRefreshToken(ctx, user.Id); err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
 		ctx.String(http.StatusOK, "登录成功")
 	case service.ErrInvalidUserOrPassword:
 		ctx.String(http.StatusOK, "用户名或密码不对")
@@ -355,9 +365,47 @@ func (u *UserHandler) LoginSMSCodeVerify(ctx *gin.Context) {
 	}
 
 	// 配置 JWT token，保持登录状态
-	u.setJWTToken(ctx, user.Id)
+	if err := u.setJWTToken(ctx, user.Id); err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		return
+	}
+	if err := u.setRefreshToken(ctx, user.Id); err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, Result{
 		Msg:  "验证码校验通过",
 		Data: user,
+	})
+}
+
+// RefreshToken: Authorization 中携带的是 refresh token
+func (u *UserHandler) RefreshToken(ctx *gin.Context) {
+	refreshTokenStr := ExtractToken(ctx)
+	var claims RefreshTokenClaims
+	token, err := jwt.ParseWithClaims(refreshTokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
+		return u.refreshTokenKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	// 生成一个新的 access token
+	if err := u.setJWTToken(ctx, claims.Uid); err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "刷新成功",
 	})
 }
