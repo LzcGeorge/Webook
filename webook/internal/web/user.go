@@ -4,7 +4,6 @@ import (
 	"Webook/webook/internal/domain"
 	"Webook/webook/internal/service"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -13,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+
+	myjwt "Webook/webook/internal/web/jwt"
 )
 
 type UserHandler struct {
@@ -21,7 +22,7 @@ type UserHandler struct {
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	cmd         redis.Cmdable
-	jwtHandler
+	myjwt.Handler
 }
 
 // 注册路由
@@ -43,7 +44,7 @@ const (
 	passwordRegexPattern = "^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{8,}$"
 )
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService, cmd redis.Cmdable) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, handler myjwt.Handler) *UserHandler {
 	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None)
 	return &UserHandler{
@@ -51,8 +52,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService, cmd re
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
 		codeSvc:     codeSvc,
-		jwtHandler:  NewJWTHandler(),
-		cmd:         cmd,
+		Handler:     handler,
 	}
 }
 
@@ -196,7 +196,6 @@ type EditReq struct {
 func (u *UserHandler) Edit(ctx *gin.Context) {
 }
 func (u *UserHandler) EditJWT(ctx *gin.Context) {
-	print("edit jwt")
 	var req EditReq
 	if err := ctx.Bind(&req); err != nil {
 		return
@@ -208,7 +207,7 @@ func (u *UserHandler) EditJWT(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	userClaims := claims.(*UserClaims)
+	userClaims := claims.(*myjwt.UserClaims)
 	userId := userClaims.UserId
 
 	birthday, err := time.Parse(time.DateOnly, req.Birthday)
@@ -260,7 +259,7 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	userClaims := claims.(*UserClaims)
+	userClaims := claims.(*myjwt.UserClaims)
 
 	// 获取用户信息
 	userId := userClaims.UserId
@@ -382,12 +381,12 @@ func (u *UserHandler) LoginSMSCodeVerify(ctx *gin.Context) {
 
 // RefreshToken: Authorization 中携带的是 refresh token
 func (u *UserHandler) RefreshToken(ctx *gin.Context) {
-	refreshTokenStr := ExtractToken(ctx)
+	refreshTokenStr := u.ExtractToken(ctx)
 
 	// 解析 refresh token
-	var claims RefreshTokenClaims
+	var claims myjwt.RefreshTokenClaims
 	token, err := jwt.ParseWithClaims(refreshTokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
-		return u.refreshTokenKey, nil
+		return myjwt.RefreshTokenKey, nil
 	})
 	if err != nil || !token.Valid {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -395,14 +394,13 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) {
 	}
 
 	// 检查 Redis 中是否存在 ssid，存在说明已经退出登录
-	cnt, err := u.cmd.Exists(ctx, fmt.Sprintf("users:ssid:%s", claims.Ssid)).Result()
-	if err != nil || cnt > 0 {
+	if err := u.CheckSession(ctx, claims.Ssid); err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
 	// 生成一个新的 access token
-	if err := u.setJWTToken(ctx, claims.Uid, claims.Ssid); err != nil {
+	if err := u.SetJWTToken(ctx, claims.Uid, claims.Ssid); err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -413,21 +411,7 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) {
 }
 
 func (u *UserHandler) LogoutJWT(ctx *gin.Context) {
-	// 设置 JWT token 和 refresh token 为空
-	ctx.Header("x-jwt-token", "")
-	ctx.Header("x-refresh-token", "")
-
-	// 获取 JWT 中的用户信息
-	claims, ok := ctx.Get("claims")
-	if !ok {
-		ctx.String(http.StatusOK, "系统错误")
-		return
-	}
-	userClaims := claims.(*UserClaims)
-
-	// 设置 Ssid 为有效，表示退出登录
-	err := u.cmd.Set(ctx, fmt.Sprintf("users:ssid:%s", userClaims.Ssid), "", time.Hour*24*7).Err()
-	if err != nil {
+	if err := u.ClearToken(ctx); err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "退出登录失败: " + err.Error(),

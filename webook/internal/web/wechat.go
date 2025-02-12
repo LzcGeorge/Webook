@@ -3,6 +3,7 @@ package web
 import (
 	"Webook/webook/internal/service"
 	"Webook/webook/internal/service/oauth2/wechat"
+	myjwt "Webook/webook/internal/web/jwt"
 	"fmt"
 	"net/http"
 
@@ -15,18 +16,18 @@ import (
 type OAuth2WechatHandler struct {
 	svc     wechat.Service
 	userSvc service.UserService
-	jwtHandler
+	myjwt.Handler
 	key             []byte
 	stateCookieName string
 }
 
-func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService) *OAuth2WechatHandler {
+func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService, handler myjwt.Handler) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
 		svc:             svc,
 		userSvc:         userSvc,
 		key:             []byte("sUwYXfLAdddhd1hyWJkWMd4gqQiFznp6"),
 		stateCookieName: "jwt_state",
-		jwtHandler:      NewJWTHandler(),
+		Handler:         handler,
 	}
 }
 
@@ -86,7 +87,13 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 		return
 	}
 
-	o.SetLoginToken(ctx, user.Id)
+	if err := o.SetLoginToken(ctx, user.Id); err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Msg:  "系统错误",
+			Code: 5,
+		})
+		return
+	}
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "登录成功",
 	})

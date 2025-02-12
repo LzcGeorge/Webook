@@ -148,7 +148,7 @@ func TestUserHandler_SignUp(t *testing.T) {
 			// 创建 userHandler 及所需的依赖 userService
 			server := gin.Default()
 			userSvc := tc.mock(ctrl)
-			userHandler := NewUserHandler(userSvc, nil)
+			userHandler := NewUserHandler(userSvc, nil, nil)
 			userHandler.RegisterRoutes(server.Group("/users"))
 
 			// 创建请求
