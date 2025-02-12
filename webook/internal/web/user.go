@@ -4,6 +4,7 @@ import (
 	"Webook/webook/internal/domain"
 	"Webook/webook/internal/service"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type UserHandler struct {
@@ -18,6 +20,7 @@ type UserHandler struct {
 	codeSvc     service.CodeService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
+	cmd         redis.Cmdable
 	jwtHandler
 }
 
@@ -26,6 +29,7 @@ func (u *UserHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/signup", u.SignUp)
 	// ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginJWT)
+	ug.POST("/logout", u.LogoutJWT)
 	ug.POST("/edit", u.EditJWT)
 	// ug.GET("/profile", u.Profile)
 	ug.GET("/profile", u.ProfileJWT)
@@ -39,7 +43,7 @@ const (
 	passwordRegexPattern = "^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).{8,}$"
 )
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, cmd redis.Cmdable) *UserHandler {
 	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None)
 	return &UserHandler{
@@ -48,6 +52,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		passwordExp: passwordExp,
 		codeSvc:     codeSvc,
 		jwtHandler:  NewJWTHandler(),
+		cmd:         cmd,
 	}
 }
 
@@ -160,11 +165,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	switch err {
 	case nil:
 		// 设置 JWT token，保持登录状态
-		if err := u.setJWTToken(ctx, user.Id); err != nil {
-			ctx.String(http.StatusOK, "系统错误")
-			return
-		}
-		if err := u.setRefreshToken(ctx, user.Id); err != nil {
+		if err := u.SetLoginToken(ctx, user.Id); err != nil {
 			ctx.String(http.StatusOK, "系统错误")
 			return
 		}
@@ -365,14 +366,7 @@ func (u *UserHandler) LoginSMSCodeVerify(ctx *gin.Context) {
 	}
 
 	// 配置 JWT token，保持登录状态
-	if err := u.setJWTToken(ctx, user.Id); err != nil {
-		ctx.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "系统错误",
-		})
-		return
-	}
-	if err := u.setRefreshToken(ctx, user.Id); err != nil {
+	if err := u.SetLoginToken(ctx, user.Id); err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "系统错误",
@@ -389,23 +383,59 @@ func (u *UserHandler) LoginSMSCodeVerify(ctx *gin.Context) {
 // RefreshToken: Authorization 中携带的是 refresh token
 func (u *UserHandler) RefreshToken(ctx *gin.Context) {
 	refreshTokenStr := ExtractToken(ctx)
+
+	// 解析 refresh token
 	var claims RefreshTokenClaims
 	token, err := jwt.ParseWithClaims(refreshTokenStr, &claims, func(token *jwt.Token) (interface{}, error) {
 		return u.refreshTokenKey, nil
 	})
-
 	if err != nil || !token.Valid {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
+	// 检查 Redis 中是否存在 ssid，存在说明已经退出登录
+	cnt, err := u.cmd.Exists(ctx, fmt.Sprintf("users:ssid:%s", claims.Ssid)).Result()
+	if err != nil || cnt > 0 {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
 	// 生成一个新的 access token
-	if err := u.setJWTToken(ctx, claims.Uid); err != nil {
+	if err := u.setJWTToken(ctx, claims.Uid, claims.Ssid); err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "刷新成功",
+	})
+}
+
+func (u *UserHandler) LogoutJWT(ctx *gin.Context) {
+	// 设置 JWT token 和 refresh token 为空
+	ctx.Header("x-jwt-token", "")
+	ctx.Header("x-refresh-token", "")
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	userClaims := claims.(*UserClaims)
+
+	// 设置 Ssid 为有效，表示退出登录
+	err := u.cmd.Set(ctx, fmt.Sprintf("users:ssid:%s", userClaims.Ssid), "", time.Hour*24*7).Err()
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "退出登录失败: " + err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "退出登录成功",
 	})
 }

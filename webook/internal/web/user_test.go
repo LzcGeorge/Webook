@@ -319,7 +319,7 @@ func TestUserHandler_LoginSMSCodeVerify(t *testing.T) {
 			// 创建 userHandler 及所需的依赖 userService
 			server := gin.Default()
 			userSvc, codeSvc := tc.mock(ctrl)
-			userHandler := NewUserHandler(userSvc, codeSvc)
+			userHandler := NewUserHandler(userSvc, codeSvc, nil)
 			userHandler.RegisterRoutes(server.Group("/users"))
 
 			// 创建请求

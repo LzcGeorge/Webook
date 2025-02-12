@@ -556,11 +556,13 @@ func (s *AuthSMSService) Send(ctx context.Context, tplToken string, args []strin
 
 ### 用户退出
 
+JWT token 本身是无状态的，在这里在 Redis 用 Ssid 来记录 token 的状态。  
+
 1. 用户登录的时候，生成一个标识 ssid，并置为有效，放到长短 token 中
+    - 在 `jwt.go` 中，生成 token 时，加入 ssid 字段。
 2. 用户登录校验的时候，检查 ssid 是否有效
-    - 
-3. 用户更新长 token 的时候，也要检查 ssid 是否有效
-4. 用户在退出登录的时候，把 ssid 置为无效
+    - 用户更新长 token 的时候，也要检查 ssid 是否有效
+3. 用户在退出登录的时候，把 ssid 置为无效
 
 
 

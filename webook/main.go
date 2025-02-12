@@ -71,7 +71,7 @@ func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 	server.Use(sessions.Sessions("mysession", store))
 
 	// 忽略登录状态的请求
-	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder(redisClient).
 		IgnorePaths("/users/login", "/users/signup").
 		IgnorePaths("/users/login_sms/code/send", "/users/login_sms").
 		IgnorePaths("/oauth2/wechat/authurl", "/oauth2/wechat/callback").
@@ -94,7 +94,7 @@ func initUser(db *gorm.DB, redisClient redis.Cmdable) (*web.UserHandler, service
 	smsSvc := memory.NewService() // 采用 memory 作为 sms 的实现
 	codeSvc := service.NewCodeService(codeRepo, smsSvc)
 
-	user := web.NewUserHandler(userSvc, codeSvc)
+	user := web.NewUserHandler(userSvc, codeSvc, redisClient)
 	return user, userSvc
 }
 

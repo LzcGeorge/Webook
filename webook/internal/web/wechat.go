@@ -86,11 +86,10 @@ func (o *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 		return
 	}
 
-	o.setJWTToken(ctx, user.Id)
+	o.SetLoginToken(ctx, user.Id)
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "登录成功",
 	})
-	return
 }
 
 type StateClaims struct {
