@@ -1,21 +1,22 @@
 package ratelimit
 
 import (
-	"Webook/webook/pkg/ratelimit"
 	_ "embed"
 	"fmt"
 	"log"
 	"net/http"
+
+	"Webook/webook/pkg/limiter"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Builder struct {
 	prefix  string
-	limiter ratelimit.Limiter
+	limiter limiter.Limiter
 }
 
-func NewBuilder(limiter ratelimit.Limiter) *Builder {
+func NewBuilder(limiter limiter.Limiter) *Builder {
 	return &Builder{
 		prefix:  "ip-limiter",
 		limiter: limiter,

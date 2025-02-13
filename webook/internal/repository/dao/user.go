@@ -51,7 +51,7 @@ type User struct {
 	WechatUnionId sql.NullString
 }
 
-func NewUserDAO(db *gorm.DB) *GormUserDAO {
+func NewUserDAO(db *gorm.DB) UserDAO {
 	return &GormUserDAO{
 		db: db,
 	}
