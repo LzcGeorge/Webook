@@ -17,6 +17,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+import (
+	_ "github.com/spf13/viper/remote"
+)
+
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {

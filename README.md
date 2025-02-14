@@ -9,8 +9,9 @@ Webook小微书（仿小红书）
 项目启动：
 - 前端：在 webook-fe 目录下，执行 `npm run dev`
 - 后端：在 webook 目录下，执行 `go run main.go`
-- 数据库：在 webook 目录下，执行 `docker compose up`
+- 第三方依赖：在 webook 目录下，执行 `docker compose up`
   - 执行 `docker compose down` 会删除数据库，结束 `docker compose up` 进程不会
+  - 包含 mysql 数据库，redis，viper
 - mock: 在 Webook 目录下，执行 `make mock`
 
 ## 注册功能
@@ -567,3 +568,74 @@ JWT token 本身是无状态的，在这里在 Redis 用 Ssid 来记录 token �
 
 
 ![image-20250211194441615](./img/image-20250211194441615.png)
+
+## 配置
+
+配置来源：启动参数，环境变量，配置文件，远程配置中心
+
+- 启动参数：某一次运行的参数，可以考虑在这里提供。最为典型的就是命令行工具，会要求你传入各 种参数，例如在 mockgen 中传递的 source、destination。
+
+- 环境变量：和具体的实例有关的参数都放在这里。比如说在实例的权重，或者实例的分组信息。
+
+- 配置文件：一些当下环境中所需要的通用的配置，比如说我们的数据库连接信息等。
+
+- 远程配置中心：它和配置文件可以说是互相补充的，除了启动程序所需的最少配置，剩下的配置都可 以放在远程配置中心。
+
+### viper
+
+viper 是一个配置管理工具。
+
+- **viper.SetConfigName() 和 viper.SetConfigType():** 指定配置文件名和类型。
+- **viper.AddConfigPath():** 添加配置文件的查找路径，Viper 会按照添加的顺序查找。
+- **viper.AutomaticEnv():** 自动读取环境变量。
+- **viper.SetEnvPrefix():** 设置环境变量的前缀，避免与其他环境变量冲突。
+- **viper.BindEnv():** 将配置项和环境变量绑定，方便使用环境变量覆盖配置文件中的值。
+- **viper.SetDefault():** 设置默认值，防止程序因缺少配置而崩溃。
+- **viper.WatchConfig() 和 viper.OnConfigChange():** 监听配置文件变化，实现动态配置更新。
+- **viper.Get...() 方法:** 用于获取配置值，注意类型转换。
+
+读取配置文件：
+
+```go
+func InitViper() {
+	viper.SetConfigName("dev")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("./config")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+}
+```
+
+
+
+为了让 viper 在不同环境下加载不同的配置文件
+
+- 在启动的时候，传入一个启动参数：`--config=config/dev.yaml`
+- <img src="./img/image-20250214162943888.png" alt="image-20250214162943888" style="zoom:50%;" />
+
+### etcd
+
+配置文件的缺点是不够灵活，难以实现权限控制，实时更新，所以考虑使用远程配置中心：etcd
+
+在 etcd 中添加配置：
+
+- 从文件中写入：`etcdctl --endpoints=127.0.0.1:12379 put /webook "$(<dev.yaml)"`
+- 读取配置：`etcdctl --endpoints=127.0.0.1:12379 get /webook`
+
+viper 同时支持监听配置变更
+
+```go
+viper.WatchConfig()
+viper.OnConfigChange(func(e fsnotify.Event) {
+		println("Config file changed:", e.Name)
+})
+```
+
+
+
+扩展：
+
+![image-20250214205200148](./img/image-20250214205200148.png)
+
