@@ -2,6 +2,7 @@ package wechat
 
 import (
 	"Webook/webook/internal/domain"
+	"Webook/webook/pkg/logger"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,13 +21,15 @@ type service struct {
 	appID     string
 	appSecret string
 	client    *http.Client
+	logger    logger.Logger
 }
 
-func NewService(appID, appSecret string) Service {
+func NewService(appID, appSecret string, l logger.Logger) Service {
 	return &service{
 		appID:     appID,
 		appSecret: appSecret,
 		client:    http.DefaultClient,
+		logger:    l,
 	}
 }
 

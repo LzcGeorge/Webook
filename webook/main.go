@@ -1,8 +1,10 @@
 package main
 
 import (
-	"github.com/fsnotify/fsnotify"
 	"net/http"
+
+	"github.com/fsnotify/fsnotify"
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/pflag"
@@ -11,8 +13,8 @@ import (
 )
 
 func main() {
-	InitViperRemote()
-
+	InitViperWithFlags()
+	InitLogger()
 	server := InitWebServer()
 
 	// 测试
@@ -33,7 +35,7 @@ func InitViper() {
 	}
 }
 
-func InitViperV1() {
+func InitViperWithFlags() {
 	// 设置默认配置文件: config/config.yaml
 	cfile := pflag.String("config", "config/config.yaml", "viper config file")
 	pflag.Parse()
@@ -66,4 +68,12 @@ func InitViperRemote() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func InitLogger() {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		panic(err)
+	}
+	zap.ReplaceGlobals(logger)
 }

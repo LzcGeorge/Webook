@@ -4,7 +4,12 @@ import (
 	"Webook/webook/internal/web"
 	myjwt "Webook/webook/internal/web/jwt"
 	"Webook/webook/internal/web/middleware"
+	logger2 "Webook/webook/pkg/ginx/middlewares/logger"
 	"Webook/webook/pkg/ginx/middlewares/ratelimit"
+	"Webook/webook/pkg/logger"
+	"context"
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 	"strings"
 	"time"
 
@@ -34,7 +39,14 @@ func newCORSConfig() cors.Config {
 }
 
 // InitGinMiddleware 初始化 Gin 中间件
-func InitGinMiddleware(redisClient redis.Cmdable, jwthandler myjwt.Handler) []gin.HandlerFunc {
+func InitGinMiddleware(redisClient redis.Cmdable, jwthandler myjwt.Handler, l logger.Logger) []gin.HandlerFunc {
+	bd := logger2.NewBuilder(func(ctx context.Context, al *logger2.AccessLog) {
+		l.Debug("HTTP请求", logger.Field{Key: "al", Value: al})
+	}).AllowReqBody(true).AllowRespBody()
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		ok := viper.GetBool("web.logreq")
+		bd.AllowReqBody(ok)
+	})
 	return []gin.HandlerFunc{
 		cors.New(newCORSConfig()),
 		// 限流

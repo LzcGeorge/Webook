@@ -3,6 +3,7 @@ package service
 import (
 	"Webook/webook/internal/domain"
 	"Webook/webook/internal/repository"
+	"Webook/webook/pkg/logger"
 	"context"
 	"errors"
 
@@ -19,12 +20,14 @@ type UserService interface {
 }
 
 type UserServiceStruct struct {
-	repo repository.UserRepository
+	repo   repository.UserRepository
+	logger logger.Logger
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
+func NewUserService(repo repository.UserRepository, l logger.Logger) UserService {
 	return &UserServiceStruct{
-		repo: repo,
+		repo:   repo,
+		logger: l,
 	}
 }
 
@@ -84,6 +87,7 @@ func (svc *UserServiceStruct) FindOrCreate(ctx context.Context, phone string) (d
 	}
 
 	// 用户不存在，创建用户
+	svc.logger.Info("创建用户 ", logger.String("phone", phone))
 	err = svc.repo.Create(ctx, domain.User{
 		Phone: phone,
 	})

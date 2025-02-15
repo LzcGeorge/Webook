@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 
 	myjwt "Webook/webook/internal/web/jwt"
 )
@@ -337,6 +338,7 @@ func (u *UserHandler) LoginSMSCodeVerify(ctx *gin.Context) {
 				Code: 5,
 				Msg:  "验证码错误次数过多，请稍后再试",
 			})
+			zap.L().Error("验证码错误次数过多", zap.Error(err))
 			return
 		}
 		ctx.JSON(http.StatusOK, Result{
