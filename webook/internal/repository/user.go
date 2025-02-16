@@ -90,7 +90,7 @@ func (repo *CachedUserRepository) entityToDomain(user dao.User) domain.User {
 
 		// 用户信息
 		Nickname: user.Nickname,
-		Birthday: user.Birthday,
+		Birthday: time.UnixMilli(user.Birthday),
 		AboutMe:  user.AboutMe,
 	}
 }
@@ -105,7 +105,7 @@ func (repo *CachedUserRepository) domainToEntity(user domain.User) dao.User {
 
 		// 用户信息
 		Nickname: user.Nickname,
-		Birthday: user.Birthday,
+		Birthday: user.Birthday.UnixMilli(),
 		AboutMe:  user.AboutMe,
 
 		// 微信信息

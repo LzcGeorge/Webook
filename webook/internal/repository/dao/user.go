@@ -43,7 +43,7 @@ type User struct {
 
 	// 用户信息
 	Nickname string
-	Birthday time.Time `gorm:"default:1992-02-03 00:00:00.000"`
+	Birthday int64
 	AboutMe  string
 
 	// 微信信息

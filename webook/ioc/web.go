@@ -8,10 +8,11 @@ import (
 	"Webook/webook/pkg/ginx/middlewares/ratelimit"
 	"Webook/webook/pkg/logger"
 	"context"
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/viper"
 	"strings"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
 
 	"Webook/webook/pkg/limiter"
 
@@ -63,7 +64,10 @@ func InitGinMiddleware(redisClient redis.Cmdable, jwthandler myjwt.Handler, l lo
 }
 
 // InitWebServer 初始化 Web 服务器
-func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler) *gin.Engine {
+func InitWebServer(middlewares []gin.HandlerFunc,
+	userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler,
+	articleHdl *web.ArticleHandler,
+) *gin.Engine {
 	server := gin.Default()
 
 	// 使用中间件
@@ -72,5 +76,8 @@ func InitWebServer(middlewares []gin.HandlerFunc, userHdl *web.UserHandler, wech
 	// 用户模块
 	userHdl.RegisterRoutes(server.Group("/users"))
 	wechatHdl.RegisterRoutes(server.Group("/oauth2/wechat"))
+
+	// 文章模块
+	articleHdl.RegisterRoutes(server.Group("/articles"))
 	return server
 }
