@@ -28,6 +28,7 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 
 // Edit 编辑文章
 type EditArticleRequest struct {
+	Id      int64  `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
@@ -52,6 +53,7 @@ func (a *ArticleHandler) Edit(ctx *gin.Context) {
 	userId := userClaims.UserId
 
 	id, err := a.svc.Edit(ctx, domain.Article{
+		Id:      req.Id,
 		Title:   req.Title,
 		Content: req.Content,
 		Author: domain.Author{

@@ -22,5 +22,8 @@ func NewArticleService(repo repository.ArticleRepository) ArticleService {
 
 // Edit 编辑文章： 返回文章 id
 func (a *articleService) Edit(ctx context.Context, article domain.Article) (int64, error) {
+	if article.Id > 0 {
+		return a.repo.Update(ctx, article)
+	}
 	return a.repo.Create(ctx, article)
 }
