@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
@@ -47,13 +48,18 @@ func (dao *GormArticleDAO) Insert(ctx context.Context, article Article) (int64, 
 func (dao *GormArticleDAO) Update(ctx context.Context, article Article) (int64, error) {
 	now := time.Now().UnixMilli()
 	article.Utime = now
-	err := dao.db.WithContext(ctx).Model(&article).
+	res := dao.db.WithContext(ctx).Model(&article).
 		Where("id = ?", article.Id).
 		Where("author_id = ?", article.AuthorId).
 		Updates(map[string]any{
 			"title":   article.Title,
 			"content": article.Content,
 			"utime":   now,
-		}).Error
-	return article.Id, err
+		})
+
+	// 至少会有更新时间 Utime 会被更新，所以可以判断是否更新成功
+	if res.RowsAffected == 0 {
+		return article.Id, errors.New("可能是别人写的文章，或者已经删除了")
+	}
+	return article.Id, res.Error
 }
