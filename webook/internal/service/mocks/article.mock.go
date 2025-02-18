@@ -70,3 +70,18 @@ func (mr *MockArticleServiceMockRecorder) Publish(ctx, article any) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockArticleService)(nil).Publish), ctx, article)
 }
+
+// PublishWithTwoRepo mocks base method.
+func (m *MockArticleService) PublishWithTwoRepo(ctx context.Context, article domain.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishWithTwoRepo", ctx, article)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublishWithTwoRepo indicates an expected call of PublishWithTwoRepo.
+func (mr *MockArticleServiceMockRecorder) PublishWithTwoRepo(ctx, article any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWithTwoRepo", reflect.TypeOf((*MockArticleService)(nil).PublishWithTwoRepo), ctx, article)
+}

@@ -4,6 +4,7 @@ package main
 
 import (
 	"Webook/webook/internal/repository"
+	"Webook/webook/internal/repository/article"
 	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/service"
@@ -32,7 +33,7 @@ func InitWebServer() *gin.Engine {
 		// repository
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
-		repository.NewArticleRepository,
+		article.NewArticleRepository,
 
 		// Service
 		ioc.InitSMSService,

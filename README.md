@@ -673,3 +673,129 @@ TDD：测试驱动开发。
 通过撰写测试，理清楚接口该如何定义，体会用户 使用起来是否合适。
 
 通过撰写测试用例，理清楚整个功能要考虑的主流 程、异常流程。
+
+
+
+这里我写一下在 Service 层中的思考过程，用 Table-Driven Test 的方式来组织测试用例
+
+- 一个 Service 控制两个 repo：读者库和写者库
+
+- ```go
+    type ArticleAuthorRepository interface {
+    	Create(ctx context.Context, article domain.Article) (int64, error)
+    	Update(ctx context.Context, article domain.Article) (int64, error)
+    }
+    ```
+
+- ```go
+    type ArticleReaderRepository interface {
+    	// Save 读者只有保存写者创建或修改的文章，即只能被动更新
+    	Save(ctx context.Context, article domain.Article) (int64, error)
+    }
+    ```
+
+测试模版：包含测试参数和如何运行
+
+```go
+func TestArticleService_Publish(t *testing.T) {
+	testCases := []struct {
+		name string
+		mock func(ctrl *gomock.Controller) (article.ArticleAuthorRepository, article.ArticleReaderRepository)
+
+		// service 的参数
+		article domain.Article
+
+		// service 的期待返回值
+		wantId  int64
+		wantErr error
+	}{
+		{},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			authorRepo, readerRepo := tc.mock(ctrl)
+			svc := NewArticleServiceWithTwoRepo(authorRepo, readerRepo)
+			resId, err := svc.PublishWithTwoRepo(context.Background(), tc.article)
+
+			assert.Equal(t, tc.wantErr, err)
+			assert.Equal(t, tc.wantId, resId)
+
+		})
+	}
+}
+
+```
+
+在 Service 中的实现，先调用写者库写入文章，然后再调用读者库返回 id 和 err。
+
+```go
+func (a *articleService) PublishWithTwoRepo(ctx context.Context, article domain.Article) (int64, error) {
+	// 写者库发表文章
+	var id = article.Id
+	var err error
+	if article.Id > 0 {
+		id, err = a.authorRepo.Update(ctx, article)
+	} else {
+		id, err = a.authorRepo.Create(ctx, article)
+	}
+	if err != nil {
+		return 0, err
+	}
+	// 确保写者库和读者库的 id 一致
+	article.Id = id
+	return a.readerRepo.Save(ctx, article)
+}
+```
+
+所以在测试用例中，要分别模拟两个 Create 的 Expect。
+
+- `authorRepo.EXPECT().Create(gomock.Any(), ...)`: 期望 authorRepo 的 Create 方法被调用，并使用 gomock.Any() 作为 context.Context 的参数。 只有匹配了 Article 对象的内容，确保只有在传入的文章与期望完全一致时，Mock 才会匹配成功。
+- readerRepo.EXPECT().Create(gomock.Any(), ...): 类似地，配置了 readerRepo 的 Save 方法。 注意到 readerRepo 期望接收的 Article 对象的 Id 是 1，这是从 authorRepo 返回的 ID。
+
+```go
+{
+    name: "创建文章，并发布成功",
+    mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository, article.ArticleReaderRepository) {
+        authorRepo := repomocks.NewMockArticleAuthorRepository(ctrl)
+        readerRepo := repomocks.NewMockArticleReaderRepository(ctrl)
+
+        // 模拟写者库创建文章的过程，要求入参为 Id 为 0 的 Article
+        // 返回 1，nil
+        authorRepo.EXPECT().Create(gomock.Any(), domain.Article{
+            Id:      0, // 默认是 0，不写这行也行
+            Title:   "create article and publish",
+            Content: "this is content",
+            Author: domain.Author{
+                Id: 666,
+            },
+        }).Return(int64(1), nil)
+
+        // 模拟读者库创建文章的过程，要求入参为 Id 为 1 的 Article
+        // 返回 1，nil
+        readerRepo.EXPECT().Save(gomock.Any(), domain.Article{
+            Id:      1, // 用写者库的 id
+            Title:   "create article and publish",
+            Content: "this is content",
+            Author: domain.Author{
+                Id: 666,
+            },
+        }).Return(int64(1), nil)
+
+        return authorRepo, readerRepo
+    },
+    article: domain.Article{
+        Title:   "create article and publish",
+        Content: "this is content",
+        Author: domain.Author{
+            Id: 666,
+        },
+    },
+    wantId:  1,
+    wantErr: nil,
+},
+```
+

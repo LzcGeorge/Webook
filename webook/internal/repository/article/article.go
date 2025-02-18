@@ -1,4 +1,4 @@
-package repository
+package article
 
 import (
 	"Webook/webook/internal/domain"
