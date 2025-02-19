@@ -664,7 +664,7 @@ viper.OnConfigChange(func(e fsnotify.Event) {
 
 ![image-20250216143947972](./img/image-20250216143947972.png)
 
-### 采用 TDD 的方式实现发表文章
+### 发表文章 TDD 开发
 
 TDD：测试驱动开发。
 
@@ -797,5 +797,33 @@ func (a *articleService) PublishWithTwoRepo(ctx context.Context, article domain.
     wantId:  1,
     wantErr: nil,
 },
+```
+
+考虑部分失败的问题：写者库写入成功，但是读者库保存失败了。
+
+- 解决方案：增加重试机制。
+
+```go
+// 读者库保存文章，如果失败，则重试, 重试至多 3 次
+for i := 0; i < 3; i++ {
+    time.Sleep(time.Second * time.Duration(i))
+    id, err = a.readerRepo.Save(ctx, article)
+    if err == nil {
+        break
+    }
+    a.logger.Error("save article to reader repo failed, try again",
+        logger.Int64("article id: ", article.Id),
+        logger.Error(err),
+    )
+}
+
+if err != nil {
+    // 重试 3 次仍然失败，则返回错误
+    a.logger.Error("reader repo save article failed",
+        logger.Int64("article id: ", article.Id),
+        logger.Error(err),
+    )
+}
+
 ```
 

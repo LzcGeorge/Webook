@@ -3,7 +3,9 @@ package service
 import (
 	"Webook/webook/internal/domain"
 	"Webook/webook/internal/repository/article"
+	"Webook/webook/pkg/logger"
 	"context"
+	"time"
 )
 
 type ArticleService interface {
@@ -19,6 +21,9 @@ type articleService struct {
 	// 一个 Service 操作两个 Repo：读者库，写者库
 	authorRepo article.ArticleAuthorRepository
 	readerRepo article.ArticleReaderRepository
+
+	// logger
+	logger logger.Logger
 }
 
 func NewArticleService(repo article.ArticleRepository) ArticleService {
@@ -27,10 +32,11 @@ func NewArticleService(repo article.ArticleRepository) ArticleService {
 	}
 }
 
-func NewArticleServiceWithTwoRepo(authorRepo article.ArticleAuthorRepository, readerRepo article.ArticleReaderRepository) ArticleService {
+func NewArticleServiceWithTwoRepo(authorRepo article.ArticleAuthorRepository, readerRepo article.ArticleReaderRepository, logger logger.Logger) ArticleService {
 	return &articleService{
 		authorRepo: authorRepo,
 		readerRepo: readerRepo,
+		logger:     logger,
 	}
 }
 
@@ -63,5 +69,27 @@ func (a *articleService) PublishWithTwoRepo(ctx context.Context, article domain.
 	}
 	// 确保写者库和读者库的 id 一致
 	article.Id = id
-	return a.readerRepo.Save(ctx, article)
+
+	// 读者库保存文章，如果失败，则重试, 重试至多 3 次
+	for i := 0; i < 3; i++ {
+		time.Sleep(time.Second * time.Duration(i))
+		id, err = a.readerRepo.Save(ctx, article)
+		if err == nil {
+			break
+		}
+		a.logger.Error("save article to reader repo failed, try again",
+			logger.Int64("article id: ", article.Id),
+			logger.Error(err),
+		)
+	}
+
+	if err != nil {
+		// 重试 3 次仍然失败，则返回错误
+		a.logger.Error("reader repo save article failed",
+			logger.Int64("article id: ", article.Id),
+			logger.Error(err),
+		)
+	}
+
+	return id, nil
 }
