@@ -44,8 +44,11 @@ func TestCachedUserRepository_FindById(t *testing.T) {
 				d := daomocks.NewMockUserDAO(ctrl)
 				d.EXPECT().FindById(gomock.Any(), int64(123)).
 					Return(dao.User{
-						Id:       123,
-						Email:    "123@qq.com",
+						Id: 123,
+						Email: sql.NullString{
+							String: "123@qq.com",
+							Valid:  true,
+						},
 						Password: "this is password",
 						Phone: sql.NullString{
 							String: "13512345678",

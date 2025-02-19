@@ -2,17 +2,17 @@ package ratelimit
 
 import (
 	"Webook/webook/internal/service/sms"
-	"Webook/webook/pkg/ratelimit"
+	"Webook/webook/pkg/limiter"
 	"context"
 	"fmt"
 )
 
 type RatelimitSMSService struct {
 	svc     sms.Service
-	limiter ratelimit.Limiter
+	limiter limiter.Limiter
 }
 
-func NewRatelimitSMSService(svc sms.Service, limiter ratelimit.Limiter) *RatelimitSMSService {
+func NewRatelimitSMSService(svc sms.Service, limiter limiter.Limiter) *RatelimitSMSService {
 	return &RatelimitSMSService{
 		svc:     svc,
 		limiter: limiter,
