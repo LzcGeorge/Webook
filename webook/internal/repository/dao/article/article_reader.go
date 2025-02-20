@@ -11,6 +11,7 @@ import (
 type ArticleReaderDAO interface {
 	Insert(ctx context.Context, art PublishedArticle) (int64, error)
 	UpdateById(ctx context.Context, art PublishedArticle) (int64, error)
+	FindById(ctx context.Context, id int64) (PublishedArticle, error)
 }
 
 type GormArticleReaderDAO struct {
@@ -48,4 +49,17 @@ func (dao *GormArticleReaderDAO) UpdateById(ctx context.Context, art PublishedAr
 		return art.Id, errors.New("可能是别人写的文章，或者已经删除了")
 	}
 	return art.Id, res.Error
+}
+
+func (dao *GormArticleReaderDAO) FindById(ctx context.Context, id int64) (PublishedArticle, error) {
+	var art PublishedArticle
+	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	if err == gorm.ErrRecordNotFound {
+		return PublishedArticle{
+			Article: Article{
+				Id: 0, // 表示不存在
+			},
+		}, nil
+	}
+	return art, err
 }

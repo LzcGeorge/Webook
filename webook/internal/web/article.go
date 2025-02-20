@@ -53,7 +53,7 @@ func (a *ArticleHandler) Edit(ctx *gin.Context) {
 	userClaims := claims.(*myjwt.UserClaims)
 	userId := userClaims.UserId
 
-	id, err := a.svc.Edit(ctx, domain.Article{
+	id, err := a.svc.Save(ctx, domain.Article{
 		Id:      req.Id,
 		Title:   req.Title,
 		Content: req.Content,
