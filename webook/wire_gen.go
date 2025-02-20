@@ -8,9 +8,10 @@ package main
 
 import (
 	"Webook/webook/internal/repository"
-	"Webook/webook/internal/repository/article"
+	article2 "Webook/webook/internal/repository/article"
 	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao"
+	"Webook/webook/internal/repository/dao/article"
 	"Webook/webook/internal/service"
 	"Webook/webook/internal/web"
 	"Webook/webook/internal/web/jwt"
@@ -41,9 +42,11 @@ func InitWebServer() *gin.Engine {
 	userHandler := web.NewUserHandler(userService, codeService, handler)
 	wechatService := ioc.InitWechatService(logger)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
-	articleDAO := dao.NewArticleDAO(db)
-	articleRepository := article.NewArticleRepository(articleDAO)
-	articleService := service.NewArticleService(articleRepository)
+	articleAuthorDAO := article.NewGormArticleAuthorDAO(db)
+	articleAuthorRepository := article2.NewArticleAuthorRepository(articleAuthorDAO)
+	articleReaderDAO := article.NewGormArticleReaderDAO(db)
+	articleReaderRepository := article2.NewArticleReaderRepository(articleReaderDAO)
+	articleService := service.NewArticleServiceWithTwoRepo(articleAuthorRepository, articleReaderRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine

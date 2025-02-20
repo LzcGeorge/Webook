@@ -2,38 +2,49 @@ package article
 
 import (
 	"Webook/webook/internal/domain"
-	"Webook/webook/internal/repository/dao"
+	"Webook/webook/internal/repository/dao/article"
 	"context"
 )
 
 type ArticleRepository interface {
-	Create(ctx context.Context, article domain.Article) (int64, error)
-	Update(ctx context.Context, article domain.Article) (int64, error)
+	Create(ctx context.Context, art domain.Article) (int64, error)
+	Update(ctx context.Context, art domain.Article) (int64, error)
 }
 
 type CachedArticleRepository struct {
-	dao dao.ArticleDAO
+	dao article.ArticleDAO
 }
 
-func NewArticleRepository(dao dao.ArticleDAO) ArticleRepository {
+func NewArticleRepository(dao article.ArticleDAO) ArticleRepository {
 	return &CachedArticleRepository{
 		dao: dao,
 	}
 }
 
-func (c *CachedArticleRepository) Create(ctx context.Context, article domain.Article) (int64, error) {
-	return c.dao.Insert(ctx, dao.Article{
-		Title:    article.Title,
-		Content:  article.Content,
-		AuthorId: article.Author.Id,
-	})
+func (c *CachedArticleRepository) Create(ctx context.Context, art domain.Article) (int64, error) {
+	return c.dao.Insert(ctx, ToArticleEntity(art))
 }
 
-func (c *CachedArticleRepository) Update(ctx context.Context, article domain.Article) (int64, error) {
-	return c.dao.Update(ctx, dao.Article{
-		Id:       article.Id,
-		Title:    article.Title,
-		Content:  article.Content,
-		AuthorId: article.Author.Id,
-	})
+func (c *CachedArticleRepository) Update(ctx context.Context, art domain.Article) (int64, error) {
+	return c.dao.UpdateById(ctx, ToArticleEntity(art))
+}
+
+func ToArticleEntity(art domain.Article) article.Article {
+	return article.Article{
+		Id:       art.Id,
+		Title:    art.Title,
+		Content:  art.Content,
+		AuthorId: art.Author.Id,
+	}
+}
+
+func ToArticleDomain(art article.Article) domain.Article {
+	return domain.Article{
+		Id:      art.Id,
+		Title:   art.Title,
+		Content: art.Content,
+		Author: domain.Author{
+			Id: art.AuthorId,
+		},
+	}
 }

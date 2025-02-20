@@ -641,7 +641,19 @@ viper.OnConfigChange(func(e fsnotify.Event) {
 
 ![image-20250214205200148](./img/image-20250214205200148.png)
 
+## TDD 
 
+第一步：根据对需求的理解，初步定义接口。在这 个步骤，不要害怕定义的接口不合适，必然会不合适。
+
+第二步：根据接口定义测试，也就是参考我给出的 测试模板，先把测试的框架写出来。
+
+第三步：执行核心循环。
+
+- 增加测试用例。
+- 提供/修改实现。
+- 执行测试用例。
+
+![image-20250220194738781](./img/image-20250220194738781.png)
 
 ## 发帖功能（TDD）
 
@@ -664,19 +676,15 @@ viper.OnConfigChange(func(e fsnotify.Event) {
 
 ![image-20250216143947972](./img/image-20250216143947972.png)
 
-### 发表文章 TDD 开发
-
-TDD：测试驱动开发。
-
-- 先写测试、 再写实现。
-
-通过撰写测试，理清楚接口该如何定义，体会用户 使用起来是否合适。
-
-通过撰写测试用例，理清楚整个功能要考虑的主流 程、异常流程。
 
 
+### PublishWithTwoRepo
 
-这里我写一下在 Service 层中的思考过程，用 Table-Driven Test 的方式来组织测试用例
+#### Service
+
+这里我写一下在 Service 层中的思考过程，用 Table-Driven Test 的方式来组织测试用例。
+
+PublishWithTwoRepo 依靠两个不同的 repository 来解决跨表，或者跨库的问题。
 
 - 一个 Service 控制两个 repo：读者库和写者库
 
@@ -824,6 +832,32 @@ if err != nil {
         logger.Error(err),
     )
 }
-
 ```
+
+#### DAO
+
+两个 Repo 对应的就该有两个 GORM 的 Entity 和他对应，相应的，数据库中也有两个 Table 与 Entity 联系起来。
+
+```go
+// 作者库：author 进行写入和更新，删除。。
+type Article struct {
+	Id      int64  `gorm:"primaryKey,autoIncrement"`
+	Title   string `gorm:"type=varchar(1024)"`
+	Content string `gorm:"type=BLOB"`
+
+	// 作者 id, 在 author_id 上建立索引
+	AuthorId int64 `gorm:"index"`
+
+	// 创建和修改时间，毫秒时间戳
+	Ctime int64
+	Utime int64
+}
+
+// 线上库：reader 进行被动更新
+type PublishedArticle struct {
+	Article
+}
+```
+
+
 

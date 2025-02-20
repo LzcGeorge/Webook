@@ -97,6 +97,7 @@ func (a *ArticleHandler) Publish(ctx *gin.Context) {
 	userId := userClaims.UserId
 
 	id, err := a.svc.Publish(ctx, domain.Article{
+		Id:      req.Id,
 		Title:   req.Title,
 		Content: req.Content,
 		Author:  domain.Author{Id: userId},
