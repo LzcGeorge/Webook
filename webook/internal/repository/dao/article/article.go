@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // 作者库：author 进行写入和更新，删除。。
@@ -30,6 +31,7 @@ type PublishedArticle struct {
 type ArticleDAO interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateById(ctx context.Context, art Article) (int64, error)
+	Sync(ctx context.Context, art Article) (int64, error)
 }
 
 type GormArticleDAO struct {
@@ -68,4 +70,45 @@ func (dao *GormArticleDAO) UpdateById(ctx context.Context, art Article) (int64, 
 		return art.Id, errors.New("可能是别人写的文章，或者已经删除了")
 	}
 	return art.Id, res.Error
+}
+
+func (dao *GormArticleDAO) Sync(ctx context.Context, art Article) (int64, error) {
+	var id = art.Id
+
+	// 使用事务，保证写者库和读者库的一致性
+	err := dao.db.WithContext(ctx).Transaction(func(txDb *gorm.DB) error {
+		var err error
+		now := time.Now().UnixMilli()
+		// 写者库,
+		dao := NewArticleDAO(txDb)
+		if id > 0 {
+			id, err = dao.UpdateById(ctx, art)
+		} else {
+			id, err = dao.Insert(ctx, art)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		// 读者库：Upsert 即 update or insert
+		art.Id = id
+		pubArt := PublishedArticle{
+			Article: art,
+		}
+		pubArt.Ctime = now
+		pubArt.Utime = now
+		err = txDb.Clauses(clause.OnConflict{
+			// id 冲突的时候执行 update，否则执行 insert
+			Columns: []clause.Column{{Name: "id"}},
+			// update 的时候，只更新 title 和 content, utime
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"title":   art.Title,
+				"content": art.Content,
+				"utime":   now,
+			}),
+		}).Create(&pubArt).Error
+		return err
+	})
+	return id, err
 }

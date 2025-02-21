@@ -25,9 +25,9 @@ func InitWebServer() *gin.Engine {
 
 		// Dao
 		dao.NewUserDAO,
-		// article2.NewArticleDAO,
-		article2.NewGormArticleAuthorDAO,
-		article2.NewGormArticleReaderDAO,
+		article2.NewArticleDAO,
+		// article2.NewGormArticleAuthorDAO,
+		// article2.NewGormArticleReaderDAO,
 
 		// Cache
 		cache.NewUserCache,
@@ -36,17 +36,17 @@ func InitWebServer() *gin.Engine {
 		// repository
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
-		// article.NewArticleRepository,
-		article.NewArticleAuthorRepository,
-		article.NewArticleReaderRepository,
+		article.NewArticleRepository,
+		// article.NewArticleAuthorRepository,
+		// article.NewArticleReaderRepository,
 
 		// Service
 		ioc.InitSMSService,
 		ioc.InitWechatService,
 		service.NewUserService,
 		service.NewCodeService,
-		// service.NewArticleService,
-		service.NewArticleServiceWithTwoRepo,
+		service.NewArticleService,
+		// service.NewArticleServiceWithTwoRepo,
 
 		// Handler
 		web.NewUserHandler,

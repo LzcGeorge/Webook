@@ -861,3 +861,85 @@ type PublishedArticle struct {
 
 
 
+### fix bug
+
+这次的改动是修复了发布到线上库的 id 判断，之前的 id 以为和发布在 写者库一样（新创建的是 0，其他大于零），实际上是 第一次创建就是 1，这个 1 是写者库传过来的id，所以要先查询线上库中有没有该 id，再判断是创建还是更新操作。 
+
+```go
+// 线上库更新
+// 类似于 FindOrCreate 中的实现，先查询线上库是否存在，不存在则创建，存在则更新
+res, err := a.readerRepo.FindById(ctx, art.Id)
+if err != nil {
+    a.logger.Error("find article by id failed",
+        logger.Int64("article id: ", art.Id),
+        logger.Error(err),
+    )
+    return 0, err
+}
+
+// 线上库的最小 id 是 1，则说明文章不存在，创建文章
+if res.Id < 1 {
+    return a.readerRepo.Create(ctx, art)
+}
+
+// 线上库存在，则更新
+return a.readerRepo.Update(ctx, art)
+```
+
+### improve: 在 dao 上用事务
+
+之前的写法有一种问题，无法保证作者库和线上库的一致性。例如在作者库创建成功，在线上库创建失败，重试多次失败。
+
+所以考虑用 事务 来保证两者的一致性。
+
+- 一种方法是：在 repository 层面上，创建两个 dao 来管理两个库
+- 另一种方法是：在 dao 层面上，用一个事务来管理两张表（同库不同表）
+
+第一种方法，会导致在 repo 层面上直接操作数据库，跨层依赖，没有坚持面向接口的原则。所以这里我采用了第二种方法。
+
+利用 GORM 的闭包，实现一个执行 事务 的操作。
+
+```go
+func (dao *GormArticleDAO) Sync(ctx context.Context, art Article) (int64, error) {
+	var id = art.Id
+
+	// 使用事务，保证写者库和读者库的一致性
+	err := dao.db.WithContext(ctx).Transaction(func(txDb *gorm.DB) error {
+		var err error
+		now := time.Now().UnixMilli()
+		// 写者库,
+		dao := NewArticleDAO(txDb)
+		if id > 0 {
+			id, err = dao.UpdateById(ctx, art)
+		} else {
+			id, err = dao.Insert(ctx, art)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		// 读者库：Upsert 即 update or insert
+		art.Id = id
+		pubArt := PublishedArticle{
+			Article: art,
+		}
+		pubArt.Ctime = now
+		pubArt.Utime = now
+		err = txDb.Clauses(clause.OnConflict{
+			// id 冲突的时候执行 update，否则执行 insert
+			Columns: []clause.Column{{Name: "id"}},
+			// update 的时候，只更新 title 和 content, utime
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"title":   art.Title,
+				"content": art.Content,
+				"utime":   now,
+			}),
+		}).Create(&pubArt).Error
+		return err
+	})
+	return id, err
+}
+
+```
+
