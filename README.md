@@ -943,3 +943,22 @@ func (dao *GormArticleDAO) Sync(ctx context.Context, art Article) (int64, error)
 
 ```
 
+### 维护文章状态
+
+![image-20250222114137072](./img/image-20250222114137072.png)
+
+可能存在状态变更的地方：
+
+- 新建文章，还未发表：`ArticleStatusUnknown` ->  `ArticleStatusUnpublished`
+- 发表文章: `ArticleStatusUnpublished` -> `ArticleStatusPublished`
+- 编辑文章：-> `ArticleStatusPublished`
+- 撤回文章：-> `ArticleStatusPrivate`
+- 删除文章：-> `ArticleStatusArchive`
+
+添加对应的两个接口实现。
+
+```go
+Withdraw(ctx context.Context, art domain.Article) (int64, error) // 撤回，仅自己可见
+Delete(ctx context.Context, art domain.Article) (int64, error)   // 删除，软删除
+```
+

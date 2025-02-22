@@ -18,6 +18,9 @@ type Article struct {
 	// 作者 id, 在 author_id 上建立索引
 	AuthorId int64 `gorm:"index"`
 
+	// 状态
+	Status uint8
+
 	// 创建和修改时间，毫秒时间戳
 	Ctime int64
 	Utime int64
@@ -31,7 +34,8 @@ type PublishedArticle struct {
 type ArticleDAO interface {
 	Insert(ctx context.Context, art Article) (int64, error)
 	UpdateById(ctx context.Context, art Article) (int64, error)
-	Sync(ctx context.Context, art Article) (int64, error)
+	Upsert(ctx context.Context, art Article) (int64, error)
+	UpdateStatus(ctx context.Context, art Article) (int64, error)
 }
 
 type GormArticleDAO struct {
@@ -62,6 +66,7 @@ func (dao *GormArticleDAO) UpdateById(ctx context.Context, art Article) (int64, 
 		Updates(map[string]any{
 			"title":   art.Title,
 			"content": art.Content,
+			"status":  art.Status,
 			"utime":   now,
 		})
 
@@ -72,7 +77,7 @@ func (dao *GormArticleDAO) UpdateById(ctx context.Context, art Article) (int64, 
 	return art.Id, res.Error
 }
 
-func (dao *GormArticleDAO) Sync(ctx context.Context, art Article) (int64, error) {
+func (dao *GormArticleDAO) Upsert(ctx context.Context, art Article) (int64, error) {
 	var id = art.Id
 
 	// 使用事务，保证写者库和读者库的一致性
@@ -105,10 +110,45 @@ func (dao *GormArticleDAO) Sync(ctx context.Context, art Article) (int64, error)
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"title":   art.Title,
 				"content": art.Content,
+				"status":  art.Status,
 				"utime":   now,
 			}),
 		}).Create(&pubArt).Error
 		return err
 	})
 	return id, err
+}
+
+func (dao *GormArticleDAO) UpdateStatus(ctx context.Context, art Article) (int64, error) {
+	now := time.Now().UnixMilli()
+
+	err := dao.db.WithContext(ctx).Transaction(func(txDb *gorm.DB) error {
+		res := txDb.Model(&art).
+			Where("id = ? and author_id = ?", art.Id, art.AuthorId).
+			Updates(map[string]any{
+				"status": art.Status,
+				"utime":  now,
+			})
+
+		if res.Error != nil {
+			return res.Error
+		}
+
+		if res.RowsAffected == 0 {
+			return errors.New("可能是别人写的文章")
+		}
+
+		// 读者库：更新 status
+		pubArt := PublishedArticle{
+			Article: art,
+		}
+		pubArt.Utime = now
+		return txDb.Model(&pubArt).
+			Where("id = ? and author_id = ?", pubArt.Id, pubArt.AuthorId).
+			Updates(map[string]any{
+				"status": art.Status,
+				"utime":  now,
+			}).Error
+	})
+	return art.Id, err
 }

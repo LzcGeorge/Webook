@@ -25,6 +25,8 @@ func NewArticleHandler(svc service.ArticleService, logger logger.Logger) *Articl
 func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/edit", a.Edit)
 	ug.POST("/publish", a.Publish)
+	ug.POST("/withdraw", a.Withdraw)
+	ug.POST("/delete", a.Delete)
 }
 
 // Edit 编辑文章
@@ -112,6 +114,87 @@ func (a *ArticleHandler) Publish(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "发布成功",
+		Data: id,
+	})
+}
+
+// Withdraw 撤回文章
+func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
+	type Req struct {
+		Id int64 `json:"id"`
+	}
+	var req Req
+	if err := ctx.BindJSON(&req); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	id, err := a.svc.Withdraw(ctx, domain.Article{
+		Id:     req.Id,
+		Author: domain.Author{Id: userId},
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "撤回成功",
+
+		Data: id,
+	})
+}
+
+// Delete 删除文章
+func (a *ArticleHandler) Delete(ctx *gin.Context) {
+	type Req struct {
+		Id int64 `json:"id"`
+	}
+	var req Req
+	if err := ctx.BindJSON(&req); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	id, err := a.svc.Delete(ctx, domain.Article{
+		Id:     req.Id,
+		Author: domain.Author{Id: userId},
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "删除成功",
 		Data: id,
 	})
 }

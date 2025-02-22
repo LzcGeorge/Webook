@@ -36,9 +36,9 @@ func InitViper() {
 }
 
 func InitViperWithFlags() {
-	// 设置默认配置文件: config/config.yaml
+	// 设置默认配置文件: config/dev.yaml
 	// 若运行时传入 --config 参数，则使用传入的配置文件
-	cfile := pflag.String("config", "config/config.yaml", "viper config file")
+	cfile := pflag.String("config", "config/dev.yaml", "viper config file")
 	pflag.Parse()
 
 	viper.SetConfigType("yaml")

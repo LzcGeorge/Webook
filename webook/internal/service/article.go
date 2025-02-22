@@ -13,6 +13,8 @@ type ArticleService interface {
 	// 在 DAO 中采用事务，同库不同表，保证读者表和写者表的一致性
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
+	Withdraw(ctx context.Context, art domain.Article) (int64, error) // 撤回，仅自己可见
+	Delete(ctx context.Context, art domain.Article) (int64, error)   // 删除，软删除
 
 	// 两个 Repo 的实现: 读者库和写者库，无事务，有重试机制
 	SaveWithTwoRepo(ctx context.Context, art domain.Article) (int64, error)
@@ -39,14 +41,34 @@ func NewArticleService(repo article.ArticleRepository) ArticleService {
 
 // Save 保存到线上库： 返回文章 id
 func (a *articleService) Save(ctx context.Context, article domain.Article) (int64, error) {
-	// return a.SaveWithTwoRepo(ctx, article)
+	// 从 ArticleStatusUnknown 到 ArticleStatusUnpublished
+	article.Status = domain.ArticleStatusUnpublished
 	return a.repo.Sync(ctx, article)
+
+	// return a.SaveWithTwoRepo(ctx, article)
 }
 
 // Publish 发布文章
 func (a *articleService) Publish(ctx context.Context, art domain.Article) (int64, error) {
+	// 从 ArticleStatusUnpublished 到 ArticleStatusPublished
+	art.Status = domain.ArticleStatusPublished
 	return a.repo.Sync(ctx, art)
+
 	// return a.PublishWithTwoRepo(ctx, art)
+}
+
+// Withdraw 撤回文章，只有作者本人可以操作，撤回后仅自己可见
+func (a *articleService) Withdraw(ctx context.Context, art domain.Article) (int64, error) {
+	// 从 ArticleStatusPublished 到 ArticleStatusPrivate
+	art.Status = domain.ArticleStatusPrivate
+	return a.repo.SyncStatus(ctx, art)
+}
+
+// Delete 删除文章，只有作者本人可以操作
+func (a *articleService) Delete(ctx context.Context, art domain.Article) (int64, error) {
+	// 从 ArticleStatusPublished 到 ArticleStatusArchived
+	art.Status = domain.ArticleStatusArchived
+	return a.repo.SyncStatus(ctx, art)
 }
 
 // NewArticleServiceWithTwoRepo 采用读者库和写者库
