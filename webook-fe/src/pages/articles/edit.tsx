@@ -1,10 +1,16 @@
-import dynamic  from 'next/dynamic'
+'use client';
+import dynamic from 'next/dynamic'
 import {Button, Form, Input} from "antd";
 import {useEffect, useState} from "react";
 import axios from "@/axios/axios";
 import router from "next/router";
-import {ProLayout} from "@ant-design/pro-components";
 import {useSearchParams} from "next/navigation";
+
+const ProLayout = dynamic(
+  () => import('@ant-design/pro-layout').then((mod) => mod.ProLayout),
+  { ssr: false }
+)
+
 const WangEditor = dynamic(
     // 引入对应的组件 设置的组件参考上面的wangEditor react使用文档
     () => import('../../components/editor'),

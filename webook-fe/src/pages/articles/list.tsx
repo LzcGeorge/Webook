@@ -1,10 +1,16 @@
 'use client';
 import {EditOutlined} from '@ant-design/icons';
-import {ProLayout, ProList} from '@ant-design/pro-components';
+import {ProList} from '@ant-design/pro-components';
 import {Button, Tag} from 'antd';
 import React, {useEffect, useState} from 'react';
 import axios from "@/axios/axios";
 import router from "next/router";
+import dynamic from 'next/dynamic';
+
+const ProLayout = dynamic(
+  () => import('@ant-design/pro-layout').then((mod) => mod.ProLayout),
+  { ssr: false }
+)
 
 const IconText = ({ icon, text, onClick }: { icon: any; text: string, onClick: any}) => (
     <Button onClick={onClick} type={"default"}>

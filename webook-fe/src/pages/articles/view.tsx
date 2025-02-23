@@ -1,11 +1,16 @@
+'use client';
 import React, {useState, useEffect} from 'react';
 import axios, {Result} from "@/axios/axios";
 import {Button, Modal, QRCode, Typography} from "antd";
-import {ProLayout} from "@ant-design/pro-components";
 import {EyeOutlined, LikeOutlined, MoneyCollectOutlined, StarOutlined} from "@ant-design/icons";
 import {useSearchParams} from "next/navigation";
 
 export const dynamic = 'force-dynamic'
+
+const ProLayout = dynamic(
+    () => import('@ant-design/pro-layout').then((mod) => mod.ProLayout),
+    { ssr: false }
+  )
 
 interface CodeURL {
     codeURL: string
