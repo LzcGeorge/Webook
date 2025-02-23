@@ -27,6 +27,7 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/publish", a.Publish)
 	ug.POST("/withdraw", a.Withdraw)
 	ug.POST("/delete", a.Delete)
+	ug.POST("/list", a.List)
 }
 
 // Edit 编辑文章
@@ -196,5 +197,26 @@ func (a *ArticleHandler) Delete(ctx *gin.Context) {
 		Code: 0,
 		Msg:  "删除成功",
 		Data: id,
+	})
+}
+
+func (h *ArticleHandler) List(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "获取成功",
+		Data: []domain.Article{
+			{
+				Id:      1,
+				Title:   "标题1",
+				Content: "内容1",
+				Author:  domain.Author{Id: 1},
+			},
+			{
+				Id:      2,
+				Title:   "标题2",
+				Content: "内容2",
+				Author:  domain.Author{Id: 2},
+			},
+		},
 	})
 }

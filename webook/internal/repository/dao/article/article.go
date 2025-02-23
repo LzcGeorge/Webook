@@ -11,19 +11,19 @@ import (
 
 // 作者库：author 进行写入和更新，删除。。
 type Article struct {
-	Id      int64  `gorm:"primaryKey,autoIncrement"`
-	Title   string `gorm:"type=varchar(1024)"`
-	Content string `gorm:"type=BLOB"`
+	Id      int64  `gorm:"primaryKey,autoIncrement" bson:"id,omitempty"`
+	Title   string `gorm:"type=varchar(1024)" bson:"title,omitempty"`
+	Content string `gorm:"type=BLOB" bson:"content,omitempty"`
 
 	// 作者 id, 在 author_id 上建立索引
-	AuthorId int64 `gorm:"index"`
+	AuthorId int64 `gorm:"index" bson:"author_id,omitempty"`
 
 	// 状态
-	Status uint8
+	Status uint8 `bson:"status,omitempty"`
 
 	// 创建和修改时间，毫秒时间戳
-	Ctime int64
-	Utime int64
+	Ctime int64 `bson:"ctime,omitempty"`
+	Utime int64 `bson:"utime,omitempty"`
 }
 
 // 线上库：reader 进行被动更新

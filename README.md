@@ -962,3 +962,155 @@ Withdraw(ctx context.Context, art domain.Article) (int64, error) // 撤回，仅
 Delete(ctx context.Context, art domain.Article) (int64, error)   // 删除，软删除
 ```
 
+## MongoDB
+
+MongoDB 是 NOSQL 的一种。NOSQL 是指 Not Only SQL ，不仅仅是 SQL。
+
+MongoDB 是文档数据库。
+
+- 面向集合存储：集合中存放很多文档。
+- 模式自由：不需要预先定义文档模型，且可以灵活修改。
+- 支持分片
+
+EDMA 是一种用来理解 BSON 文档结构的简化模型，它将 BSON 文档分解为四种基本类型：键值对 (E)、有序文档 (D)、无序文档 (M) 和数组 (A)。 这种模型可能有助于新手更容易理解 BSON 的结构。 
+
+*   **E (Element):** 一个简单的键值对结构体 (key-value pair)。 Key 是字符串类型，Value 可以是其他三种类型之一。 在 Go 代码中表示为：
+
+    ```go
+    type E struct {
+      Key   string
+      Value interface{}
+    }
+    ```
+
+*   **D (Document):** 本质上是 E 的一个切片 (slice)。 它可以理解为一个有序的键值对列表，对应 BSON 中的文档。 在 Go 代码中表示为：
+
+    ```go
+    type D []E
+    ```
+
+    示例：
+
+    ```go
+    bson.D{{"foo", "bar"}, {"hello", "world"}, {"pi", 3.14159}}
+    ```
+
+*   **M (Map):** 本质是一个 Go 中的 `map[string]interface{}`。 key 必须是字符串， value 可以是任何类型，包括其他三种类型。 对应 BSON 中的文档，但与 D 不同，Map 是无序的。 在 Go 代码中表示为：
+
+    ```go
+    type M map[string]interface{}
+    ```
+
+    示例：
+
+    ```go
+    bson.M{"foo": "bar", "hello": "world", "pi": 3.14159}
+    ```
+
+*   **A (Array):** 是一个切片 `[]interface{}`，表示 BSON 中的数组。 元素可以是其他三种类型或者任意类型。 在 Go 代码中表示为：
+
+    ```go
+    type A []interface{}
+    ```
+
+    示例：
+
+    ```go
+    bson.A{"bar", "world", 3.14159, bson.D{{"qux", 12345}}}
+    ```
+
+
+
+### 雪花算法
+
+- 41 比特位的时间戳
+- 10 比特位的机器位
+- 12 比特的自增序号
+- 1 比特保留位
+
+![image-20250223153642644](./img/image-20250223153642644.png)
+
+因为 MongoDB 中没有自增主键，所以我们用雪花算法来生成一个 GUID （Global Unify ID) 全局唯一 ID。
+
+- GUID 是业务上的层面，UUID 是技术上的层面，也可以用 UUID 来生成 GUID 
+
+### 用 MongoDB 实现 ArticleRepository 接口
+
+这里没有事务来保证写者库和线上库的一致性了。
+
+
+
+```go
+func (dao *MongoDBArticleDAO) Upsert(ctx context.Context, art Article) (int64, error) {
+	var (
+		id  = art.Id
+		err error
+	)
+
+	// 写者库
+	if id > 0 {
+		id, err = dao.UpdateById(ctx, art)
+	} else {
+		id, err = dao.Insert(ctx, art)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	// 线上库
+	art.Id = id
+	now := time.Now().UnixMilli()
+	art.Utime = now
+	filter := bson.D{
+		bson.E{
+			Key:   "id",
+			Value: id,
+		},
+	}
+
+	set := bson.D{
+		bson.E{
+			Key:   "$set",
+			Value: art,
+		},
+		bson.E{
+			Key: "$setOnInsert",
+			Value: bson.D{
+				bson.E{
+					Key:   "ctime",
+					Value: now,
+				},
+			},
+		},
+	}
+
+	opt := options.Update().SetUpsert(true)
+	_, err = dao.liveCol.UpdateOne(ctx, filter, set, opt)
+
+	return id, err
+}
+
+```
+
+
+
+set 和 setOnInsert： 
+
+- set 用于更新字段
+- setOnInsert 用于仅在插入时设置字段。
+
+Upsert
+
+- MySQL 的 Upsert 操作通常使用 INSERT ... ON DUPLICATE KEY UPDATE 语句实现。
+- MongoDB 的 Upsert 操作通过 update() 方法，并设置 `upsert: true` 选项来实现。 
+
+优化：如何实现写者库和线上库的一致性
+
+- 2PC：两阶段提交 （分布式事务协议）
+
+- 最终一致性：采用消息队列(Kafaak,RabbitMQ)
+
+- 开启一个事务（MongoDB 4.x+ 支持多文档事务）
+
+    
