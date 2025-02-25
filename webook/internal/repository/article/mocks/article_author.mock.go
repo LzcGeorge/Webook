@@ -42,31 +42,31 @@ func (m *MockArticleAuthorRepository) EXPECT() *MockArticleAuthorRepositoryMockR
 }
 
 // Create mocks base method.
-func (m *MockArticleAuthorRepository) Create(ctx context.Context, article domain.Article) (int64, error) {
+func (m *MockArticleAuthorRepository) Create(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, article)
+	ret := m.ctrl.Call(m, "Create", ctx, art)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockArticleAuthorRepositoryMockRecorder) Create(ctx, article any) *gomock.Call {
+func (mr *MockArticleAuthorRepositoryMockRecorder) Create(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockArticleAuthorRepository)(nil).Create), ctx, article)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockArticleAuthorRepository)(nil).Create), ctx, art)
 }
 
 // Update mocks base method.
-func (m *MockArticleAuthorRepository) Update(ctx context.Context, article domain.Article) (int64, error) {
+func (m *MockArticleAuthorRepository) Update(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, article)
+	ret := m.ctrl.Call(m, "Update", ctx, art)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockArticleAuthorRepositoryMockRecorder) Update(ctx, article any) *gomock.Call {
+func (mr *MockArticleAuthorRepositoryMockRecorder) Update(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockArticleAuthorRepository)(nil).Update), ctx, article)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockArticleAuthorRepository)(nil).Update), ctx, art)
 }

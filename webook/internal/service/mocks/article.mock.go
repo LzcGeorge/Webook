@@ -41,47 +41,92 @@ func (m *MockArticleService) EXPECT() *MockArticleServiceMockRecorder {
 	return m.recorder
 }
 
-// Edit mocks base method.
-func (m *MockArticleService) Edit(ctx context.Context, article domain.Article) (int64, error) {
+// Delete mocks base method.
+func (m *MockArticleService) Delete(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Edit", ctx, article)
+	ret := m.ctrl.Call(m, "Delete", ctx, art)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Edit indicates an expected call of Edit.
-func (mr *MockArticleServiceMockRecorder) Edit(ctx, article any) *gomock.Call {
+// Delete indicates an expected call of Delete.
+func (mr *MockArticleServiceMockRecorder) Delete(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Edit", reflect.TypeOf((*MockArticleService)(nil).Edit), ctx, article)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockArticleService)(nil).Delete), ctx, art)
 }
 
 // Publish mocks base method.
-func (m *MockArticleService) Publish(ctx context.Context, article domain.Article) (int64, error) {
+func (m *MockArticleService) Publish(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Publish", ctx, article)
+	ret := m.ctrl.Call(m, "Publish", ctx, art)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Publish indicates an expected call of Publish.
-func (mr *MockArticleServiceMockRecorder) Publish(ctx, article any) *gomock.Call {
+func (mr *MockArticleServiceMockRecorder) Publish(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockArticleService)(nil).Publish), ctx, article)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Publish", reflect.TypeOf((*MockArticleService)(nil).Publish), ctx, art)
 }
 
 // PublishWithTwoRepo mocks base method.
-func (m *MockArticleService) PublishWithTwoRepo(ctx context.Context, article domain.Article) (int64, error) {
+func (m *MockArticleService) PublishWithTwoRepo(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishWithTwoRepo", ctx, article)
+	ret := m.ctrl.Call(m, "PublishWithTwoRepo", ctx, art)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PublishWithTwoRepo indicates an expected call of PublishWithTwoRepo.
-func (mr *MockArticleServiceMockRecorder) PublishWithTwoRepo(ctx, article any) *gomock.Call {
+func (mr *MockArticleServiceMockRecorder) PublishWithTwoRepo(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWithTwoRepo", reflect.TypeOf((*MockArticleService)(nil).PublishWithTwoRepo), ctx, article)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWithTwoRepo", reflect.TypeOf((*MockArticleService)(nil).PublishWithTwoRepo), ctx, art)
+}
+
+// Save mocks base method.
+func (m *MockArticleService) Save(ctx context.Context, art domain.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save", ctx, art)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockArticleServiceMockRecorder) Save(ctx, art any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockArticleService)(nil).Save), ctx, art)
+}
+
+// SaveWithTwoRepo mocks base method.
+func (m *MockArticleService) SaveWithTwoRepo(ctx context.Context, art domain.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveWithTwoRepo", ctx, art)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SaveWithTwoRepo indicates an expected call of SaveWithTwoRepo.
+func (mr *MockArticleServiceMockRecorder) SaveWithTwoRepo(ctx, art any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveWithTwoRepo", reflect.TypeOf((*MockArticleService)(nil).SaveWithTwoRepo), ctx, art)
+}
+
+// Withdraw mocks base method.
+func (m *MockArticleService) Withdraw(ctx context.Context, art domain.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Withdraw", ctx, art)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Withdraw indicates an expected call of Withdraw.
+func (mr *MockArticleServiceMockRecorder) Withdraw(ctx, art any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Withdraw", reflect.TypeOf((*MockArticleService)(nil).Withdraw), ctx, art)
 }

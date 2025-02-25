@@ -38,7 +38,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 				return svc
 			},
 			reqBody: `{
-				"title":"new artice and publish",
+				"title":"new article and publish",
 				"content":"content"
 			}`,
 			wantCode: http.StatusOK,

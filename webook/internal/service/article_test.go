@@ -43,9 +43,12 @@ func TestArticleService_Publish(t *testing.T) {
 					},
 				}).Return(int64(1), nil)
 
+				// 模拟查询读者库，返回 空文章，nil ，表示文章不存在
+				readerRepo.EXPECT().FindById(gomock.Any(), int64(1)).Return(domain.Article{}, nil)
+
 				// 模拟读者库创建文章的过程，要求入参为 Id 为 1 的 Article
 				// 返回 1，nil
-				readerRepo.EXPECT().Save(gomock.Any(), domain.Article{
+				readerRepo.EXPECT().Create(gomock.Any(), domain.Article{
 					Id:      1, // 用写者库的 id
 					Title:   "create article and publish",
 					Content: "this is content",
@@ -82,7 +85,12 @@ func TestArticleService_Publish(t *testing.T) {
 					},
 				}).Return(int64(12), nil)
 
-				readerRepo.EXPECT().Save(gomock.Any(), domain.Article{
+				// 模拟查询读者库，返回 文章 id，nil ，表示文章存在
+				readerRepo.EXPECT().FindById(gomock.Any(), int64(12)).Return(domain.Article{
+					Id: 12,
+				}, nil)
+
+				readerRepo.EXPECT().Update(gomock.Any(), domain.Article{
 					Id:      12, // 用写者库的 id
 					Title:   "edit article and publish",
 					Content: "fix: this is content",
@@ -119,17 +127,25 @@ func TestArticleService_Publish(t *testing.T) {
 					},
 				}).Return(int64(12), nil)
 
-				readerRepo.EXPECT().Save(gomock.Any(), domain.Article{
+				// 模拟查询读者库，返回 文章 id，nil ，表示文章存在
+				readerRepo.EXPECT().FindById(gomock.Any(), int64(12)).Return(domain.Article{
+					Id: 12,
+				}, nil)
+
+				readerRepo.EXPECT().Update(gomock.Any(), domain.Article{
 					Id:      12, // 用写者库的 id
 					Title:   "edit article and publish",
 					Content: "fix: this is content",
 					Author: domain.Author{
 						Id: 666,
 					},
-				}).Return(int64(12), errors.New("save failed"))
+				}).Return(int64(12), errors.New("update failed"))
 
 				// 重试
-				readerRepo.EXPECT().Save(gomock.Any(), domain.Article{
+				readerRepo.EXPECT().FindById(gomock.Any(), int64(12)).Return(domain.Article{
+					Id: 12,
+				}, nil)
+				readerRepo.EXPECT().Update(gomock.Any(), domain.Article{
 					Id:      12, // 用写者库的 id
 					Title:   "edit article and publish",
 					Content: "fix: this is content",
@@ -165,14 +181,21 @@ func TestArticleService_Publish(t *testing.T) {
 					},
 				}).Return(int64(12), nil)
 
-				readerRepo.EXPECT().Save(gomock.Any(), domain.Article{
-					Id:      12, // 用写者库的 id
-					Title:   "edit article and publish",
-					Content: "fix: this is content",
-					Author: domain.Author{
-						Id: 666,
-					},
-				}).Times(3).Return(int64(12), errors.New("save failed"))
+				for i := 0; i < 3; i++ {
+					// 模拟查询读者库，返回 文章 id，nil ，表示文章存在
+					readerRepo.EXPECT().FindById(gomock.Any(), int64(12)).Return(domain.Article{
+						Id: 12,
+					}, nil)
+
+					readerRepo.EXPECT().Update(gomock.Any(), domain.Article{
+						Id:      12, // 用写者库的 id
+						Title:   "edit article and publish",
+						Content: "fix: this is content",
+						Author: domain.Author{
+							Id: 666,
+						},
+					}).Return(int64(12), errors.New("update failed"))
+				}
 
 				return authorRepo, readerRepo
 			},

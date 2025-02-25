@@ -41,17 +41,47 @@ func (m *MockArticleReaderRepository) EXPECT() *MockArticleReaderRepositoryMockR
 	return m.recorder
 }
 
-// Save mocks base method.
-func (m *MockArticleReaderRepository) Save(ctx context.Context, article domain.Article) (int64, error) {
+// Create mocks base method.
+func (m *MockArticleReaderRepository) Create(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", ctx, article)
+	ret := m.ctrl.Call(m, "Create", ctx, art)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Save indicates an expected call of Save.
-func (mr *MockArticleReaderRepositoryMockRecorder) Save(ctx, article any) *gomock.Call {
+// Create indicates an expected call of Create.
+func (mr *MockArticleReaderRepositoryMockRecorder) Create(ctx, art any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockArticleReaderRepository)(nil).Save), ctx, article)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockArticleReaderRepository)(nil).Create), ctx, art)
+}
+
+// FindById mocks base method.
+func (m *MockArticleReaderRepository) FindById(ctx context.Context, id int64) (domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindById", ctx, id)
+	ret0, _ := ret[0].(domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindById indicates an expected call of FindById.
+func (mr *MockArticleReaderRepositoryMockRecorder) FindById(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindById", reflect.TypeOf((*MockArticleReaderRepository)(nil).FindById), ctx, id)
+}
+
+// Update mocks base method.
+func (m *MockArticleReaderRepository) Update(ctx context.Context, art domain.Article) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", ctx, art)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockArticleReaderRepositoryMockRecorder) Update(ctx, art any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockArticleReaderRepository)(nil).Update), ctx, art)
 }
