@@ -36,6 +36,7 @@ type ArticleDAO interface {
 	UpdateById(ctx context.Context, art Article) (int64, error)
 	Upsert(ctx context.Context, art Article) (int64, error)
 	UpdateStatus(ctx context.Context, art Article) (int64, error)
+	GetByAuthorId(ctx context.Context, userId int64, limit int, offset int) ([]Article, error)
 }
 
 type GormArticleDAO struct {
@@ -151,4 +152,12 @@ func (dao *GormArticleDAO) UpdateStatus(ctx context.Context, art Article) (int64
 			}).Error
 	})
 	return art.Id, err
+}
+
+func (dao *GormArticleDAO) GetByAuthorId(ctx context.Context, userId int64, limit int, offset int) ([]Article, error) {
+	var arts []Article
+	err := dao.db.WithContext(ctx).Where("author_id = ?", userId).
+		Order("ctime desc").
+		Limit(limit).Offset(offset).Find(&arts).Error
+	return arts, err
 }

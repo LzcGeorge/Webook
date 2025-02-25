@@ -200,23 +200,81 @@ func (a *ArticleHandler) Delete(ctx *gin.Context) {
 	})
 }
 
-func (h *ArticleHandler) List(ctx *gin.Context) {
+// ------------------------------------------------------------
+// 查询部分
+// ------------------------------------------------------------
+
+// ArticlePage 文章分页
+type ArticlePage struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+type ArticleVO struct {
+	Id         int64  `json:"id"`
+	Title      string `json:"title"`
+	Abstract   string `json:"abstract"`
+	Content    string `json:"content"`
+	AuthorId   int64  `json:"author_id"`
+	AuthorName string `json:"author_name"`
+	Status     uint8  `json:"status"`
+	Ctime      string `json:"ctime"`
+	Utime      string `json:"utime"`
+}
+
+// List 获取文章列表
+func (a *ArticleHandler) List(ctx *gin.Context) {
+	var page ArticlePage
+	if err := ctx.BindJSON(&page); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	articles, err := a.svc.List(ctx, userId, page.Limit, page.Offset)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取文章列表失败",
+			logger.Int64("limit", int64(page.Limit)),
+			logger.Int64("offset", int64(page.Offset)),
+			logger.Int64("userId", userId),
+			logger.Error(err),
+		)
+		return
+	}
+
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
-		Msg:  "获取成功",
-		Data: []domain.Article{
-			{
-				Id:      1,
-				Title:   "标题1",
-				Content: "内容1",
-				Author:  domain.Author{Id: 1},
-			},
-			{
-				Id:      2,
-				Title:   "标题2",
-				Content: "内容2",
-				Author:  domain.Author{Id: 2},
-			},
-		},
+		Msg:  "获取文章列表成功",
+		Data: toArticleVOs(articles),
 	})
+}
+
+func toArticleVOs(arts []domain.Article) []ArticleVO {
+	result := make([]ArticleVO, 0)
+	for _, art := range arts {
+		result = append(result, ArticleVO{
+			Id:       art.Id,
+			Title:    art.Title,
+			Abstract: art.Abstract(),
+			Status:   art.Status.ToUint8(),
+			Ctime:    art.Ctime.Format("2006-01-02 15:04:05"),
+			Utime:    art.Utime.Format("2006-01-02 15:04:05"),
+		})
+	}
+	return result
 }

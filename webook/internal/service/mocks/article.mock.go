@@ -56,6 +56,21 @@ func (mr *MockArticleServiceMockRecorder) Delete(ctx, art any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockArticleService)(nil).Delete), ctx, art)
 }
 
+// List mocks base method.
+func (m *MockArticleService) List(ctx context.Context, userId int64, limit, offset int) ([]domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, userId, limit, offset)
+	ret0, _ := ret[0].([]domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockArticleServiceMockRecorder) List(ctx, userId, limit, offset any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockArticleService)(nil).List), ctx, userId, limit, offset)
+}
+
 // Publish mocks base method.
 func (m *MockArticleService) Publish(ctx context.Context, art domain.Article) (int64, error) {
 	m.ctrl.T.Helper()
