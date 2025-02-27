@@ -6,6 +6,7 @@ import (
 	myjwt "Webook/webook/internal/web/jwt"
 	"Webook/webook/pkg/logger"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -272,8 +273,8 @@ func toArticleVOs(arts []domain.Article) []ArticleVO {
 			Title:    art.Title,
 			Abstract: art.Abstract(),
 			Status:   art.Status.ToUint8(),
-			Ctime:    art.Ctime.Format("2006-01-02 15:04:05"),
-			Utime:    art.Utime.Format("2006-01-02 15:04:05"),
+			Ctime:    art.Ctime.Format(time.DateTime),
+			Utime:    art.Utime.Format(time.DateTime),
 		})
 	}
 	return result

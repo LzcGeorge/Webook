@@ -73,7 +73,7 @@ func (a *articleService) Delete(ctx context.Context, art domain.Article) (int64,
 }
 
 func (a *articleService) List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error) {
-	return a.repo.GetByAuthorId(ctx, userId, limit, offset)
+	return a.repo.List(ctx, userId, limit, offset)
 }
 
 // ------------------------------------------------------------
