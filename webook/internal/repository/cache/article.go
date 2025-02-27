@@ -16,6 +16,10 @@ type ArticleCache interface {
 	SetFirstPage(ctx context.Context, userId int64, arts []domain.Article) error
 	GetFirstPage(ctx context.Context, userId int64) ([]domain.Article, error)
 	DelFirstPage(ctx context.Context, userId int64) error
+
+	// 缓存文章
+	Set(ctx context.Context, art domain.Article) error
+	Get(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type RedisArticleCache struct {
@@ -65,4 +69,28 @@ func (c *RedisArticleCache) GetFirstPage(ctx context.Context, userId int64) ([]d
 
 func (c *RedisArticleCache) DelFirstPage(ctx context.Context, userId int64) error {
 	return c.client.Del(ctx, c.key(userId)).Err()
+}
+
+func (c *RedisArticleCache) detailKey(id int64) string {
+	return fmt.Sprintf("article:detail:%d", id)
+}
+
+func (c *RedisArticleCache) Set(ctx context.Context, art domain.Article) error {
+	jsonData, err := json.Marshal(art)
+	if err != nil {
+		return err
+	}
+
+	return c.client.Set(ctx, c.detailKey(art.Id), jsonData, time.Minute).Err()
+}
+
+func (c *RedisArticleCache) Get(ctx context.Context, id int64) (domain.Article, error) {
+	jsonData, err := c.client.Get(ctx, c.detailKey(id)).Bytes()
+	if err != nil {
+		return domain.Article{}, err
+	}
+
+	var art domain.Article
+	err = json.Unmarshal(jsonData, &art)
+	return art, err
 }

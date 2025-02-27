@@ -16,6 +16,7 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, art domain.Article) (int64, error) // 撤回，仅自己可见
 	Delete(ctx context.Context, art domain.Article) (int64, error)   // 删除，软删除
 	List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error)
+	Detail(ctx context.Context, id int64) (domain.Article, error)
 
 	// 两个 Repo 的实现: 读者库和写者库，无事务，有重试机制
 	SaveWithTwoRepo(ctx context.Context, art domain.Article) (int64, error)
@@ -76,6 +77,18 @@ func (a *articleService) List(ctx context.Context, userId int64, limit int, offs
 	return a.repo.List(ctx, userId, limit, offset)
 }
 
+// Detail 获取文章详情
+func (a *articleService) Detail(ctx context.Context, id int64) (domain.Article, error) {
+	return a.repo.FindById(ctx, id)
+}
+
+//
+//
+//
+//
+//
+//
+//
 // ------------------------------------------------------------
 // 采用读者库和写者库
 // ------------------------------------------------------------

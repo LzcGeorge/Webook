@@ -15,6 +15,7 @@ type ArticleRepository interface {
 	Sync(ctx context.Context, art domain.Article) (int64, error)
 	SyncStatus(ctx context.Context, art domain.Article) (int64, error)
 	List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error)
+	FindById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -96,6 +97,10 @@ func (c *CachedArticleRepository) List(ctx context.Context, userId int64, limit 
 			c.logger.Info("缓存命中",
 				logger.Int64("userId", userId),
 			)
+			// 预缓存列表中的第一篇文章
+			go func() {
+				c.preCache(ctx, cachedArts)
+			}()
 			return cachedArts, nil
 		}
 	}
@@ -129,7 +134,50 @@ func (c *CachedArticleRepository) List(ctx context.Context, userId int64, limit 
 			}
 		}
 	}()
+
+	// 预缓存列表中的第一篇文章
+	go func() {
+		c.preCache(ctx, result)
+	}()
 	return result, nil
+}
+
+func (c *CachedArticleRepository) preCache(ctx context.Context, arts []domain.Article) {
+	const detailExpire = time.Minute
+	const contentSizeThreshold = 1024 * 1024 // 1MB
+
+	if len(arts) > 0 && len(arts[0].Content) < contentSizeThreshold {
+		art := arts[0]
+		if err := c.cache.Set(ctx, art); err != nil {
+			c.logger.Error("预缓存第一篇文章失败", logger.Error(err))
+		}
+	}
+}
+func (c *CachedArticleRepository) FindById(ctx context.Context, id int64) (domain.Article, error) {
+	// 从缓存中获取
+	res, err := c.cache.Get(ctx, id)
+	if err == nil {
+		return res, nil
+	}
+
+	// 缓存未命中，从数据库中获取
+	art, err := c.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+
+	// 缓存该文章
+	domainArt := ToArticleDomain(art)
+	defer func() {
+		err := c.cache.Set(ctx, domainArt)
+		if err != nil {
+			c.logger.Error("缓存文章失败",
+				logger.Int64("id", id),
+				logger.Error(err),
+			)
+		}
+	}()
+	return domainArt, nil
 }
 
 func ToArticleEntity(art domain.Article) article.Article {

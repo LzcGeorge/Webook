@@ -56,6 +56,21 @@ func (mr *MockArticleServiceMockRecorder) Delete(ctx, art any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockArticleService)(nil).Delete), ctx, art)
 }
 
+// Detail mocks base method.
+func (m *MockArticleService) Detail(ctx context.Context, id int64) (domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Detail", ctx, id)
+	ret0, _ := ret[0].(domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Detail indicates an expected call of Detail.
+func (mr *MockArticleServiceMockRecorder) Detail(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Detail", reflect.TypeOf((*MockArticleService)(nil).Detail), ctx, id)
+}
+
 // List mocks base method.
 func (m *MockArticleService) List(ctx context.Context, userId int64, limit, offset int) ([]domain.Article, error) {
 	m.ctrl.T.Helper()

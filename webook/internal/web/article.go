@@ -6,6 +6,7 @@ import (
 	myjwt "Webook/webook/internal/web/jwt"
 	"Webook/webook/pkg/logger"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +29,11 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.POST("/publish", a.Publish)
 	ug.POST("/withdraw", a.Withdraw)
 	ug.POST("/delete", a.Delete)
+
+	// 文章列表
 	ug.POST("/list", a.List)
+	// 文章详情
+	ug.GET("/detail/:id", a.Detail)
 }
 
 // Edit 编辑文章
@@ -278,4 +283,74 @@ func toArticleVOs(arts []domain.Article) []ArticleVO {
 		})
 	}
 	return result
+}
+
+// Detail 获取文章详情
+func (a *ArticleHandler) Detail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "id 格式错误",
+		})
+		a.logger.Error("id 格式错误",
+			logger.String("id", idStr),
+			logger.Error(err),
+		)
+		return
+	}
+
+	article, err := a.svc.Detail(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取文章详情失败",
+			logger.Int64("id", id),
+			logger.Error(err),
+		)
+		return
+	}
+
+	// 检查用户是否是作者
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	if article.Author.Id != userId {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "您无权限编辑其他用户的文章",
+		})
+		a.logger.Error("用户无权限编辑其他人的文章",
+			logger.Int64("articleId", article.Id),
+			logger.Int64("userId", userId),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "获取文章详情成功",
+		Data: ArticleVO{
+			Id:         article.Id,
+			Title:      article.Title,
+			Content:    article.Content,
+			AuthorId:   article.Author.Id,
+			AuthorName: article.Author.Name,
+			Status:     article.Status.ToUint8(),
+			Ctime:      article.Ctime.Format(time.DateTime),
+			Utime:      article.Utime.Format(time.DateTime),
+		},
+	})
 }
