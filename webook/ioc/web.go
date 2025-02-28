@@ -66,7 +66,7 @@ func InitGinMiddleware(redisClient redis.Cmdable, jwthandler myjwt.Handler, l lo
 // InitWebServer 初始化 Web 服务器
 func InitWebServer(middlewares []gin.HandlerFunc,
 	userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler,
-	articleHdl *web.ArticleHandler,
+	articleHdl *web.ArticleHandler, articleReaderHdl *web.ArticleReaderHandler,
 ) *gin.Engine {
 	server := gin.Default()
 
@@ -79,5 +79,6 @@ func InitWebServer(middlewares []gin.HandlerFunc,
 
 	// 文章模块
 	articleHdl.RegisterRoutes(server.Group("/articles"))
+	articleReaderHdl.RegisterRoutes(server.Group("/pub"))
 	return server
 }

@@ -2,6 +2,7 @@ package article
 
 import (
 	"Webook/webook/internal/domain"
+	"Webook/webook/internal/repository"
 	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao/article"
 	"Webook/webook/pkg/logger"
@@ -16,19 +17,23 @@ type ArticleRepository interface {
 	SyncStatus(ctx context.Context, art domain.Article) (int64, error)
 	List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error)
 	FindById(ctx context.Context, id int64) (domain.Article, error)
+	FindPublicById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
-	dao    article.ArticleDAO
-	cache  cache.ArticleCache
-	logger logger.Logger
+	dao   article.ArticleDAO
+	cache cache.ArticleCache
+	// 查询用户信息
+	userRepo repository.UserRepository
+	logger   logger.Logger
 }
 
-func NewArticleRepository(dao article.ArticleDAO, cache cache.ArticleCache, logger logger.Logger) ArticleRepository {
+func NewArticleRepository(dao article.ArticleDAO, cache cache.ArticleCache, userRepo repository.UserRepository, logger logger.Logger) ArticleRepository {
 	return &CachedArticleRepository{
-		dao:    dao,
-		cache:  cache,
-		logger: logger,
+		dao:      dao,
+		cache:    cache,
+		userRepo: userRepo,
+		logger:   logger,
 	}
 }
 
@@ -178,6 +183,40 @@ func (c *CachedArticleRepository) FindById(ctx context.Context, id int64) (domai
 		}
 	}()
 	return domainArt, nil
+}
+
+func (c *CachedArticleRepository) FindPublicById(ctx context.Context, id int64) (domain.Article, error) {
+	// 从缓存中获取
+	res, err := c.cache.GetPublic(ctx, id)
+	if err == nil {
+		return res, nil
+	}
+
+	// 缓存未命中，从数据库中获取
+	artPublic_published, err := c.dao.FindPublicById(ctx, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+
+	// 获取作者信息
+	artPublic := ToArticleDomain(artPublic_published.Article)
+	author, err := c.userRepo.FindById(ctx, artPublic.Author.Id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	artPublic.Author.Name = author.Nickname
+
+	// 缓存该文章
+	go func() {
+		err := c.cache.SetPublic(ctx, artPublic)
+		if err != nil {
+			c.logger.Error("缓存Public文章失败",
+				logger.Int64("id", id),
+				logger.Error(err),
+			)
+		}
+	}()
+	return artPublic, nil
 }
 
 func ToArticleEntity(art domain.Article) article.Article {

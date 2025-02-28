@@ -5,7 +5,7 @@ import {Button, Modal, QRCode, Typography} from "antd";
 import {EyeOutlined, LikeOutlined, MoneyCollectOutlined, StarOutlined} from "@ant-design/icons";
 import {useSearchParams} from "next/navigation";
 
-export const dynamic = 'force-dynamic'
+import dynamic from 'next/dynamic'
 
 const ProLayout = dynamic(
     () => import('@ant-design/pro-layout').then((mod) => mod.ProLayout),

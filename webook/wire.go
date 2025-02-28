@@ -54,6 +54,7 @@ func InitWebServer() *gin.Engine {
 		myjwt.NewRedisJWTHandler,
 		web.NewOAuth2WechatHandler,
 		web.NewArticleHandler,
+		web.NewArticleReaderHandler,
 		ioc.InitGinMiddleware,
 		ioc.InitWebServer,
 	)

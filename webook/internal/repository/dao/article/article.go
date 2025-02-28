@@ -38,6 +38,7 @@ type ArticleDAO interface {
 	UpdateStatus(ctx context.Context, art Article) (int64, error)
 	GetByAuthorId(ctx context.Context, userId int64, limit int, offset int) ([]Article, error)
 	FindById(ctx context.Context, id int64) (Article, error)
+	FindPublicById(ctx context.Context, id int64) (PublishedArticle, error)
 }
 
 type GormArticleDAO struct {
@@ -165,6 +166,12 @@ func (dao *GormArticleDAO) GetByAuthorId(ctx context.Context, userId int64, limi
 
 func (dao *GormArticleDAO) FindById(ctx context.Context, id int64) (Article, error) {
 	var art Article
+	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	return art, err
+}
+
+func (dao *GormArticleDAO) FindPublicById(ctx context.Context, id int64) (PublishedArticle, error) {
+	var art PublishedArticle
 	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
 	return art, err
 }
