@@ -20,6 +20,10 @@ type ArticleHandler struct {
 type ArticleReaderHandler struct {
 	svc    service.ArticleService
 	logger logger.Logger
+
+	// 阅读，点赞，收藏
+	biz      string
+	interSvc service.InteractiveService
 }
 
 func NewArticleHandler(svc service.ArticleService, logger logger.Logger) *ArticleHandler {
@@ -29,10 +33,12 @@ func NewArticleHandler(svc service.ArticleService, logger logger.Logger) *Articl
 	}
 }
 
-func NewArticleReaderHandler(svc service.ArticleService, logger logger.Logger) *ArticleReaderHandler {
+func NewArticleReaderHandler(svc service.ArticleService, interSvc service.InteractiveService, logger logger.Logger) *ArticleReaderHandler {
 	return &ArticleReaderHandler{
-		svc:    svc,
-		logger: logger,
+		svc:      svc,
+		logger:   logger,
+		biz:      "article",
+		interSvc: interSvc,
 	}
 }
 
@@ -48,8 +54,8 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.GET("/detail/:id", a.Detail)
 
 	// 临时的策略。
-	articleReaderHandler := NewArticleReaderHandler(a.svc, a.logger)
-	ug.GET("/pub/:id", articleReaderHandler.PublicDetail)
+	// articleReaderHandler := NewArticleReaderHandler(a.svc, a.logger)
+	// ug.GET("/pub/:id", articleReaderHandler.PublicDetail)
 }
 
 func (a *ArticleReaderHandler) RegisterRoutes(ug *gin.RouterGroup) {
@@ -403,6 +409,16 @@ func (a *ArticleReaderHandler) PublicDetail(ctx *gin.Context) {
 		return
 	}
 
+	// 增加阅读计数
+	go func() {
+		err := a.interSvc.IncreaseReadCnt(ctx, a.biz, article.Id)
+		if err != nil {
+			a.logger.Error("增加阅读计数失败",
+				logger.Int64("id", article.Id),
+				logger.Error(err),
+			)
+		}
+	}()
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "获取Public文章详情成功",

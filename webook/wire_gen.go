@@ -47,7 +47,11 @@ func InitWebServer() *gin.Engine {
 	articleRepository := article2.NewArticleRepository(articleDAO, articleCache, userRepository, logger)
 	articleService := service.NewArticleService(articleRepository)
 	articleHandler := web.NewArticleHandler(articleService, logger)
-	articleReaderHandler := web.NewArticleReaderHandler(articleService, logger)
+	interactiveDAO := dao.NewInteractiveDAO(db)
+	interactiveCache := cache.NewInteractiveCache(cmdable)
+	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache)
+	interactiveService := service.NewInteractiveService(interactiveRepository)
+	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler, articleReaderHandler)
 	return engine
 }

@@ -17,7 +17,7 @@ type ArticleRepository interface {
 	SyncStatus(ctx context.Context, art domain.Article) (int64, error)
 	List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error)
 	FindById(ctx context.Context, id int64) (domain.Article, error)
-	FindPublicById(ctx context.Context, id int64) (domain.Article, error)
+	FindPublishedArticleById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -75,6 +75,8 @@ func (c *CachedArticleRepository) Sync(ctx context.Context, art domain.Article) 
 				logger.Error(err),
 			)
 		}
+		// 缓存Public文章
+		c.cache.SetPublic(ctx, art)
 	}()
 	return c.dao.Upsert(ctx, ToArticleEntity(art))
 }
@@ -185,7 +187,7 @@ func (c *CachedArticleRepository) FindById(ctx context.Context, id int64) (domai
 	return domainArt, nil
 }
 
-func (c *CachedArticleRepository) FindPublicById(ctx context.Context, id int64) (domain.Article, error) {
+func (c *CachedArticleRepository) FindPublishedArticleById(ctx context.Context, id int64) (domain.Article, error) {
 	// 从缓存中获取
 	res, err := c.cache.GetPublic(ctx, id)
 	if err == nil {

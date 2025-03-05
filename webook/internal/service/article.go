@@ -85,7 +85,7 @@ func (a *articleService) Detail(ctx context.Context, id int64) (domain.Article, 
 
 // PublicDetail 获取文章详情
 func (a *articleService) PublicDetail(ctx context.Context, id int64) (domain.Article, error) {
-	return a.repo.FindPublicById(ctx, id)
+	return a.repo.FindPublishedArticleById(ctx, id)
 }
 
 //

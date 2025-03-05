@@ -28,19 +28,20 @@ func InitWebServer() *gin.Engine {
 		article2.NewArticleDAO,
 		// article2.NewGormArticleAuthorDAO,
 		// article2.NewGormArticleReaderDAO,
+		dao.NewInteractiveDAO,
 
 		// Cache
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		cache.NewRedisArticleCache,
-
+		cache.NewInteractiveCache,
 		// repository
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
 		article.NewArticleRepository,
 		// article.NewArticleAuthorRepository,
 		// article.NewArticleReaderRepository,
-
+		repository.NewInteractiveRepository,
 		// Service
 		ioc.InitSMSService,
 		ioc.InitWechatService,
@@ -48,6 +49,7 @@ func InitWebServer() *gin.Engine {
 		service.NewCodeService,
 		service.NewArticleService,
 		// service.NewArticleServiceWithTwoRepo,
+		service.NewInteractiveService,
 
 		// Handler
 		web.NewUserHandler,
