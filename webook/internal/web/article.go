@@ -56,10 +56,12 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	// 临时的策略。
 	// articleReaderHandler := NewArticleReaderHandler(a.svc, a.logger)
 	// ug.GET("/pub/:id", articleReaderHandler.PublicDetail)
+
 }
 
 func (a *ArticleReaderHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.GET("/:id", a.PublicDetail)
+	ug.POST("/like", a.Like)
 }
 
 // Edit 编辑文章
@@ -432,5 +434,55 @@ func (a *ArticleReaderHandler) PublicDetail(ctx *gin.Context) {
 			Ctime:      article.Ctime.Format(time.DateTime),
 			Utime:      article.Utime.Format(time.DateTime),
 		},
+	})
+}
+
+func (a *ArticleReaderHandler) Like(ctx *gin.Context) {
+	type Req struct {
+		Id int64 `json:"id"`
+		// 点赞还是取消点赞
+		Like bool `json:"like"`
+	}
+	var req Req
+	if err := ctx.BindJSON(&req); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	var err error
+	if req.Like {
+		err = a.interSvc.IncreaseLike(ctx, a.biz, req.Id, userId)
+	} else {
+		err = a.interSvc.DecreaseLike(ctx, a.biz, req.Id, userId)
+	}
+
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("点赞/取消点赞失败",
+			logger.Int64("articleId", req.Id),
+			logger.Int64("userId", userId),
+			logger.Error(err),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "点赞/取消点赞成功",
 	})
 }

@@ -7,6 +7,8 @@ import (
 
 type InteractiveService interface {
 	IncreaseReadCnt(ctx context.Context, biz string, bizId int64) error
+	IncreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
+	DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 }
 
 type interactiveService struct {
@@ -21,4 +23,12 @@ func NewInteractiveService(repo repository.InteractiveRepository) InteractiveSer
 
 func (s *interactiveService) IncreaseReadCnt(ctx context.Context, biz string, bizId int64) error {
 	return s.repo.IncreaseReadCnt(ctx, biz, bizId)
+}
+
+func (s *interactiveService) IncreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error {
+	return s.repo.IncreaseLikeCnt(ctx, biz, bizId, userId)
+}
+
+func (s *interactiveService) DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error {
+	return s.repo.DecreaseLikeCnt(ctx, biz, bizId, userId)
 }

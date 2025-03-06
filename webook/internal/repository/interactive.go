@@ -8,6 +8,8 @@ import (
 
 type InteractiveRepository interface {
 	IncreaseReadCnt(ctx context.Context, biz string, bizId int64) error
+	IncreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
+	DecreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 }
 
 type interactiveRepository struct {
@@ -35,4 +37,24 @@ func (r *interactiveRepository) IncreaseReadCnt(ctx context.Context, biz string,
 	// 由于用户对阅读量不敏感，所以可以容忍这种不一致
 	// 所以使用 redis 自增，后续有 Set 方法来回写 redis
 	return r.cache.IncreaseReadCntIfPresent(ctx, biz, bizId)
+}
+
+func (r *interactiveRepository) IncreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error {
+	err := r.dao.InsertLikeInfo(ctx, biz, bizId, userId)
+	if err != nil {
+		return err
+	}
+
+	// 缓存中增加点赞信息
+	return r.cache.IncreaseLikeCntIfPresent(ctx, biz, bizId)
+}
+
+func (r *interactiveRepository) DecreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error {
+	err := r.dao.DeleteLikeInfo(ctx, biz, bizId, userId)
+	if err != nil {
+		return err
+	}
+
+	// 缓存中减少点赞信息
+	return r.cache.DecreaseLikeCntIfPresent(ctx, biz, bizId)
 }

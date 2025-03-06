@@ -14,6 +14,8 @@ var luaIncrCnt string
 
 type InteractiveCache interface {
 	IncreaseReadCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	IncreaseLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	DecreaseLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 }
 
 type RedisInteractiveCache struct {
@@ -36,6 +38,22 @@ func (r *RedisInteractiveCache) IncreaseReadCntIfPresent(ctx context.Context, bi
 	return r.client.Eval(ctx, luaIncrCnt,
 		[]string{r.key(biz, bizId)},
 		"read_cnt",
+		1,
+	).Err()
+}
+
+func (r *RedisInteractiveCache) IncreaseLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+	return r.client.Eval(ctx, luaIncrCnt,
+		[]string{r.key(biz, bizId)},
+		"like_cnt",
+		1,
+	).Err()
+}
+
+func (r *RedisInteractiveCache) DecreaseLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+	return r.client.Eval(ctx, luaIncrCnt,
+		[]string{r.key(biz, bizId)},
+		"like_cnt",
 		1,
 	).Err()
 }
