@@ -10,6 +10,7 @@ type InteractiveRepository interface {
 	IncreaseReadCnt(ctx context.Context, biz string, bizId int64) error
 	IncreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 	DecreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
+	InsertCollection(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
 }
 
 type interactiveRepository struct {
@@ -57,4 +58,13 @@ func (r *interactiveRepository) DecreaseLikeCnt(ctx context.Context, biz string,
 
 	// 缓存中减少点赞信息
 	return r.cache.DecreaseLikeCntIfPresent(ctx, biz, bizId)
+}
+
+func (r *interactiveRepository) InsertCollection(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error {
+	err := r.dao.InsertCollection(ctx, biz, bizId, collectionId, userId)
+	if err != nil {
+		return err
+	}
+
+	return r.cache.IncreaseCollectCntIfPresent(ctx, biz, bizId)
 }

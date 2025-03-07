@@ -9,6 +9,7 @@ type InteractiveService interface {
 	IncreaseReadCnt(ctx context.Context, biz string, bizId int64) error
 	IncreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 	DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
+	Collect(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
 }
 
 type interactiveService struct {
@@ -31,4 +32,8 @@ func (s *interactiveService) IncreaseLike(ctx context.Context, biz string, bizId
 
 func (s *interactiveService) DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error {
 	return s.repo.DecreaseLikeCnt(ctx, biz, bizId, userId)
+}
+
+func (s *interactiveService) Collect(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error {
+	return s.repo.InsertCollection(ctx, biz, bizId, collectionId, userId)
 }

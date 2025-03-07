@@ -62,6 +62,7 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 func (a *ArticleReaderHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.GET("/:id", a.PublicDetail)
 	ug.POST("/like", a.Like)
+	ug.POST("/collect", a.Collect)
 }
 
 // Edit 编辑文章
@@ -421,6 +422,7 @@ func (a *ArticleReaderHandler) PublicDetail(ctx *gin.Context) {
 			)
 		}
 	}()
+
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "获取Public文章详情成功",
@@ -484,5 +486,49 @@ func (a *ArticleReaderHandler) Like(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "点赞/取消点赞成功",
+	})
+}
+
+func (a *ArticleReaderHandler) Collect(ctx *gin.Context) {
+	type Req struct {
+		Id  int64 `json:"id"`
+		Cid int64 `json:"cid"`
+	}
+	var req Req
+	if err := ctx.BindJSON(&req); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	err := a.interSvc.Collect(ctx, a.biz, req.Id, req.Cid, userId)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("收藏失败",
+			logger.Int64("articleId", req.Id),
+			logger.Int64("collectionId", req.Cid),
+			logger.Int64("userId", userId),
+			logger.Error(err),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "收藏成功",
 	})
 }
