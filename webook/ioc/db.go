@@ -3,11 +3,12 @@ package ioc
 import (
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/pkg/logger"
+	"time"
+
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	glogger "gorm.io/gorm/logger"
-	"time"
 )
 
 // InitDB 初始化数据库
@@ -40,6 +41,19 @@ func InitDB(l logger.Logger) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
+
+	// 清理表
+	// err = dao.TruncateTable(db, "articles")
+	// err = dao.TruncateTable(db, "published_articles")
+	// err = dao.TruncateTable(db, "interactives")
+	// err = dao.TruncateTable(db, "user_like_bizs")
+	// err = dao.TruncateTable(db, "user_collect_bizs")
+
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// 初始化表
 	err = dao.InitTable(db)
 	if err != nil {
 		panic(err)

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"Webook/webook/internal/domain"
 	"Webook/webook/internal/repository/cache"
 	"Webook/webook/internal/repository/dao"
 	"context"
@@ -11,6 +12,7 @@ type InteractiveRepository interface {
 	IncreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 	DecreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 	InsertCollection(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
+	GetInteractive(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error)
 }
 
 type interactiveRepository struct {
@@ -67,4 +69,24 @@ func (r *interactiveRepository) InsertCollection(ctx context.Context, biz string
 	}
 
 	return r.cache.IncreaseCollectCntIfPresent(ctx, biz, bizId)
+}
+
+func (r *interactiveRepository) GetInteractive(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error) {
+	interactive, err := r.dao.GetInteractive(ctx, biz, bizId)
+	if err != nil {
+		return domain.Interactive{}, err
+	}
+	liked, err := r.dao.GetLiked(ctx, biz, bizId, userId)
+	if err != nil {
+		return domain.Interactive{}, err
+	}
+	collected, err := r.dao.GetCollected(ctx, biz, bizId, userId)
+
+	return domain.Interactive{
+		ReadCnt:    interactive.ReadCnt,
+		LikeCnt:    interactive.LikeCnt,
+		CollectCnt: interactive.CollectCnt,
+		Liked:      liked,
+		Collected:  collected,
+	}, nil
 }

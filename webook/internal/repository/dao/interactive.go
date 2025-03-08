@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -50,6 +51,9 @@ type InteractiveDAO interface {
 	InsertLikeInfo(ctx context.Context, biz string, bizId int64, userId int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, bizId int64, userId int64) error
 	InsertCollection(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
+	GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error)
+	GetLiked(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
+	GetCollected(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
 }
 
 type GormInteractiveDAO struct {
@@ -164,4 +168,36 @@ func (dao *GormInteractiveDAO) InsertCollection(ctx context.Context, biz string,
 			Utime:      now,
 		}).Error
 	})
+}
+
+func (dao *GormInteractiveDAO) GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error) {
+	var res Interactive
+	err := dao.db.WithContext(ctx).
+		Where("biz = ? AND biz_id = ?", biz, bizId).First(&res).Error
+	return res, err
+}
+
+func (dao *GormInteractiveDAO) GetLiked(ctx context.Context, biz string, bizId int64, userId int64) (bool, error) {
+	var like UserLikeBiz
+	err := dao.db.WithContext(ctx).Where("uid = ? AND biz = ? AND biz_id = ?", userId, biz, bizId).First(&like).Error
+	if err == gorm.ErrRecordNotFound {
+		// 记录不存在，说明用户没有点赞，返回 false 且没有错误
+		return false, nil
+	}
+	// 其他错误则返回错误
+	if err != nil {
+		return false, err
+	}
+	// 记录存在，根据 status 判断是否点赞
+	return like.Status == 1, nil
+}
+
+// 获取用户是否收藏，如何用 sql 查询呢？
+func (dao *GormInteractiveDAO) GetCollected(ctx context.Context, biz string, bizId int64, userId int64) (bool, error) {
+	var collect UserCollectBiz
+	// 查询是否存在,查询不到返回什么？
+	err := dao.db.WithContext(ctx).Where("uid = ? AND biz = ? AND biz_id = ?", userId, biz, bizId).First(&collect).Error
+	fmt.Printf("err : %v\n", err)
+	fmt.Printf(" err != gorm.ErrRecordNotFound : %v\n", err != gorm.ErrRecordNotFound)
+	return err != gorm.ErrRecordNotFound, err
 }

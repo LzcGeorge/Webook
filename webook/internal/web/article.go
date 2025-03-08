@@ -53,10 +53,6 @@ func (a *ArticleHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	// 文章详情
 	ug.GET("/detail/:id", a.Detail)
 
-	// 临时的策略。
-	// articleReaderHandler := NewArticleReaderHandler(a.svc, a.logger)
-	// ug.GET("/pub/:id", articleReaderHandler.PublicDetail)
-
 }
 
 func (a *ArticleReaderHandler) RegisterRoutes(ug *gin.RouterGroup) {
@@ -255,6 +251,13 @@ type ArticleVO struct {
 	Status     uint8  `json:"status"`
 	Ctime      string `json:"ctime"`
 	Utime      string `json:"utime"`
+
+	// 阅读量，点赞数，收藏数
+	ReadCnt    int64 `json:"readCnt"`
+	LikeCnt    int64 `json:"likeCnt"`
+	CollectCnt int64 `json:"collectCnt"`
+	Liked      bool  `json:"liked"`
+	Collected  bool  `json:"collected"`
 }
 
 // List 获取文章列表
@@ -309,6 +312,7 @@ func toArticleVOs(arts []domain.Article) []ArticleVO {
 			Status:   art.Status.ToUint8(),
 			Ctime:    art.Ctime.Format(time.DateTime),
 			Utime:    art.Utime.Format(time.DateTime),
+
 		})
 	}
 	return result
@@ -412,16 +416,34 @@ func (a *ArticleReaderHandler) PublicDetail(ctx *gin.Context) {
 		return
 	}
 
-	// 增加阅读计数
-	go func() {
-		err := a.interSvc.IncreaseReadCnt(ctx, a.biz, article.Id)
-		if err != nil {
-			a.logger.Error("增加阅读计数失败",
-				logger.Int64("id", article.Id),
-				logger.Error(err),
-			)
-		}
-	}()
+	// 增加阅读计数，保证 Interactive 中存在 (biz,bizId) 的记录
+	// IncreaseReadCnt 采用 Upsert 的写法，如果记录不存在，则创建，如果记录存在，则更新
+	err = a.interSvc.IncreaseReadCnt(ctx, a.biz, article.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("增加阅读计数失败",
+			logger.Int64("id", article.Id),
+			logger.Error(err),
+		)
+		return
+	}
+
+	userClaims := ctx.MustGet("claims").(*myjwt.UserClaims)
+	interactive, err := a.interSvc.Get(ctx, a.biz, article.Id, userClaims.UserId)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取互动信息失败",
+			logger.Int64("id", article.Id),
+			logger.Error(err),
+		)
+		return
+	}
 
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
@@ -435,6 +457,12 @@ func (a *ArticleReaderHandler) PublicDetail(ctx *gin.Context) {
 			Status:     article.Status.ToUint8(),
 			Ctime:      article.Ctime.Format(time.DateTime),
 			Utime:      article.Utime.Format(time.DateTime),
+
+			ReadCnt:    interactive.ReadCnt,
+			LikeCnt:    interactive.LikeCnt,
+			CollectCnt: interactive.CollectCnt,
+			Liked:      interactive.Liked,
+			Collected:  interactive.Collected,
 		},
 	})
 }

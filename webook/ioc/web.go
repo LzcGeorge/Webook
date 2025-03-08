@@ -79,6 +79,7 @@ func InitWebServer(middlewares []gin.HandlerFunc,
 
 	// 文章模块
 	articleHdl.RegisterRoutes(server.Group("/articles"))
-	articleReaderHdl.RegisterRoutes(server.Group("/pub"))
+	// 线上库文章
+	articleReaderHdl.RegisterRoutes(server.Group("articles/pub"))
 	return server
 }

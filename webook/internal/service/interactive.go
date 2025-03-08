@@ -1,6 +1,7 @@
 package service
 
 import (
+	"Webook/webook/internal/domain"
 	"Webook/webook/internal/repository"
 	"context"
 )
@@ -10,6 +11,7 @@ type InteractiveService interface {
 	IncreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 	DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 	Collect(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
+	Get(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error)
 }
 
 type interactiveService struct {
@@ -36,4 +38,8 @@ func (s *interactiveService) DecreaseLike(ctx context.Context, biz string, bizId
 
 func (s *interactiveService) Collect(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error {
 	return s.repo.InsertCollection(ctx, biz, bizId, collectionId, userId)
+}
+
+func (s *interactiveService) Get(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error) {
+	return s.repo.GetInteractive(ctx, biz, bizId, userId)
 }
