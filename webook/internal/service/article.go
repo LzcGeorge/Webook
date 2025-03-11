@@ -18,6 +18,7 @@ type ArticleService interface {
 	List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error)
 	Detail(ctx context.Context, id int64) (domain.Article, error)
 	PublicDetail(ctx context.Context, id int64) (domain.Article, error)
+	PublicList(ctx context.Context, end time.Time, offset int, limit int) ([]domain.Article, error)
 
 	// 两个 Repo 的实现: 读者库和写者库，无事务，有重试机制
 	SaveWithTwoRepo(ctx context.Context, art domain.Article) (int64, error)
@@ -86,6 +87,11 @@ func (a *articleService) Detail(ctx context.Context, id int64) (domain.Article, 
 // PublicDetail 获取文章详情
 func (a *articleService) PublicDetail(ctx context.Context, id int64) (domain.Article, error) {
 	return a.repo.FindPublishedArticleById(ctx, id)
+}
+
+// PublicList 获取线上库文章列表
+func (a *articleService) PublicList(ctx context.Context, end time.Time, offset int, limit int) ([]domain.Article, error) {
+	panic("implement me")
 }
 
 //

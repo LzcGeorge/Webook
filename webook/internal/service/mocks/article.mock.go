@@ -13,6 +13,7 @@ import (
 	domain "Webook/webook/internal/domain"
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "go.uber.org/mock/gomock"
 )
@@ -99,6 +100,21 @@ func (m *MockArticleService) PublicDetail(ctx context.Context, id int64) (domain
 func (mr *MockArticleServiceMockRecorder) PublicDetail(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicDetail", reflect.TypeOf((*MockArticleService)(nil).PublicDetail), ctx, id)
+}
+
+// PublicList mocks base method.
+func (m *MockArticleService) PublicList(ctx context.Context, end time.Time, offset, limit int) ([]domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublicList", ctx, end, offset, limit)
+	ret0, _ := ret[0].([]domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PublicList indicates an expected call of PublicList.
+func (mr *MockArticleServiceMockRecorder) PublicList(ctx, end, offset, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicList", reflect.TypeOf((*MockArticleService)(nil).PublicList), ctx, end, offset, limit)
 }
 
 // Publish mocks base method.

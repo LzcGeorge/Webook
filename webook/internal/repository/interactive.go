@@ -13,6 +13,7 @@ type InteractiveRepository interface {
 	DecreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 	InsertCollection(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
 	GetInteractive(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error)
+	GetInterMapByBizIds(ctx context.Context, biz string, BizIds []int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveRepository struct {
@@ -89,4 +90,21 @@ func (r *interactiveRepository) GetInteractive(ctx context.Context, biz string, 
 		Liked:      liked,
 		Collected:  collected,
 	}, nil
+}
+
+func (r *interactiveRepository) GetInterMapByBizIds(ctx context.Context, biz string, BizIds []int64) (map[int64]domain.Interactive, error) {
+	inters, err := r.dao.GetByBizIds(ctx, biz, BizIds)
+	if err != nil {
+		return nil, err
+	}
+
+	res := make(map[int64]domain.Interactive, len(inters))
+	for _, inter := range inters {
+		res[inter.BizId] = domain.Interactive{
+			ReadCnt:    inter.ReadCnt,
+			LikeCnt:    inter.LikeCnt,
+			CollectCnt: inter.CollectCnt,
+		}
+	}
+	return res, nil
 }

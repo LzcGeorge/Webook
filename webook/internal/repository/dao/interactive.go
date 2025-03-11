@@ -2,7 +2,6 @@ package dao
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -54,6 +53,7 @@ type InteractiveDAO interface {
 	GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error)
 	GetLiked(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
 	GetCollected(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
+	GetByBizIds(ctx context.Context, biz string, bizIds []int64) ([]Interactive, error)
 }
 
 type GormInteractiveDAO struct {
@@ -192,12 +192,15 @@ func (dao *GormInteractiveDAO) GetLiked(ctx context.Context, biz string, bizId i
 	return like.Status == 1, nil
 }
 
-// 获取用户是否收藏，如何用 sql 查询呢？
+// GetCollected 获取用户是否收藏了某个业务
 func (dao *GormInteractiveDAO) GetCollected(ctx context.Context, biz string, bizId int64, userId int64) (bool, error) {
 	var collect UserCollectBiz
-	// 查询是否存在,查询不到返回什么？
 	err := dao.db.WithContext(ctx).Where("uid = ? AND biz = ? AND biz_id = ?", userId, biz, bizId).First(&collect).Error
-	fmt.Printf("err : %v\n", err)
-	fmt.Printf(" err != gorm.ErrRecordNotFound : %v\n", err != gorm.ErrRecordNotFound)
 	return err != gorm.ErrRecordNotFound, err
+}
+
+func (dao *GormInteractiveDAO) GetByBizIds(ctx context.Context, biz string, bizIds []int64) ([]Interactive, error) {
+	var res []Interactive
+	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id IN ?", biz, bizIds).Find(&res).Error
+	return res, err
 }

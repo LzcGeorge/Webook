@@ -71,19 +71,19 @@ func (mr *MockArticleRepositoryMockRecorder) FindById(ctx, id any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindById", reflect.TypeOf((*MockArticleRepository)(nil).FindById), ctx, id)
 }
 
-// FindPublicById mocks base method.
-func (m *MockArticleRepository) FindPublicById(ctx context.Context, id int64) (domain.Article, error) {
+// FindPublishedArticleById mocks base method.
+func (m *MockArticleRepository) FindPublishedArticleById(ctx context.Context, id int64) (domain.Article, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FindPublicById", ctx, id)
+	ret := m.ctrl.Call(m, "FindPublishedArticleById", ctx, id)
 	ret0, _ := ret[0].(domain.Article)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// FindPublicById indicates an expected call of FindPublicById.
-func (mr *MockArticleRepositoryMockRecorder) FindPublicById(ctx, id any) *gomock.Call {
+// FindPublishedArticleById indicates an expected call of FindPublishedArticleById.
+func (mr *MockArticleRepositoryMockRecorder) FindPublishedArticleById(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPublicById", reflect.TypeOf((*MockArticleRepository)(nil).FindPublicById), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPublishedArticleById", reflect.TypeOf((*MockArticleRepository)(nil).FindPublishedArticleById), ctx, id)
 }
 
 // List mocks base method.

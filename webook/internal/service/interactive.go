@@ -6,12 +6,14 @@ import (
 	"context"
 )
 
+//go:generate mockgen -source=./interactive.go -package=svcmocks -destination=./mocks/interactive.mock.go
 type InteractiveService interface {
 	IncreaseReadCnt(ctx context.Context, biz string, bizId int64) error
 	IncreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 	DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 	Collect(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
 	Get(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error)
+	GetInterMapByBizIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveService struct {
@@ -42,4 +44,8 @@ func (s *interactiveService) Collect(ctx context.Context, biz string, bizId int6
 
 func (s *interactiveService) Get(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error) {
 	return s.repo.GetInteractive(ctx, biz, bizId, userId)
+}
+
+func (s *interactiveService) GetInterMapByBizIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
+	return s.repo.GetInterMapByBizIds(ctx, biz, bizIds)
 }
