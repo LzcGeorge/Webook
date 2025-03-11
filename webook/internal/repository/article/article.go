@@ -7,6 +7,9 @@ import (
 	"Webook/webook/internal/repository/dao/article"
 	"Webook/webook/pkg/logger"
 	"context"
+	"errors"
+	"github.com/ecodeclub/ekit/slice"
+	"gorm.io/gorm"
 	"time"
 )
 
@@ -18,6 +21,7 @@ type ArticleRepository interface {
 	List(ctx context.Context, userId int64, limit int, offset int) ([]domain.Article, error)
 	FindById(ctx context.Context, id int64) (domain.Article, error)
 	FindPublishedArticleById(ctx context.Context, id int64) (domain.Article, error)
+	FindPublishedArticleList(ctx context.Context, end time.Time, offset int, limit int) ([]domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -68,10 +72,23 @@ func (c *CachedArticleRepository) Update(ctx context.Context, art domain.Article
 func (c *CachedArticleRepository) Sync(ctx context.Context, art domain.Article) (int64, error) {
 	// 数据修改后删除缓存
 	defer func() {
-		err := c.cache.DelFirstPage(ctx, art.Author.Id)
-		if err != nil {
-			c.logger.Error("Sync Article 后删除缓存失败",
+		if err := c.cache.DelFirstPage(ctx, art.Author.Id); err != nil {
+			c.logger.Error("Sync Article 后删除缓存 FirstPage 失败",
 				logger.Int64("userId", art.Author.Id),
+				logger.Error(err),
+			)
+		}
+
+		if err := c.cache.DelPublic(ctx, art.Id); err != nil {
+			c.logger.Error("Sync Article 后删除缓存 Public Article  失败",
+				logger.Int64("articleId", art.Id),
+				logger.Error(err),
+			)
+		}
+
+		if err := c.cache.Del(ctx, art.Id); err != nil {
+			c.logger.Error("Sync Article 后删除缓存 article 失败",
+				logger.Int64("articleId", art.Id),
 				logger.Error(err),
 			)
 		}
@@ -84,13 +101,27 @@ func (c *CachedArticleRepository) Sync(ctx context.Context, art domain.Article) 
 func (c *CachedArticleRepository) SyncStatus(ctx context.Context, art domain.Article) (int64, error) {
 	// 数据修改后删除缓存
 	defer func() {
-		err := c.cache.DelFirstPage(ctx, art.Author.Id)
-		if err != nil {
-			c.logger.Error("SyncStatus Article 后删除缓存失败",
+		if err := c.cache.DelFirstPage(ctx, art.Author.Id); err != nil {
+			c.logger.Error("SyncStatus Article 后删除缓存 FirstPage 失败",
 				logger.Int64("userId", art.Author.Id),
 				logger.Error(err),
 			)
 		}
+
+		if err := c.cache.DelPublic(ctx, art.Id); err != nil {
+			c.logger.Error("SyncStatus Article 后删除缓存 Public Article  失败",
+				logger.Int64("articleId", art.Id),
+				logger.Error(err),
+			)
+		}
+
+		if err := c.cache.Del(ctx, art.Id); err != nil {
+			c.logger.Error("SyncStatus Article 后删除缓存 article 失败",
+				logger.Int64("articleId", art.Id),
+				logger.Error(err),
+			)
+		}
+
 	}()
 	return c.dao.UpdateStatus(ctx, ToArticleEntity(art))
 }
@@ -196,6 +227,9 @@ func (c *CachedArticleRepository) FindPublishedArticleById(ctx context.Context, 
 
 	// 缓存未命中，从数据库中获取
 	artPublic_published, err := c.dao.FindPublicById(ctx, id)
+	if err == gorm.ErrRecordNotFound {
+		return domain.Article{}, errors.New("文章不存在或未发表")
+	}
 	if err != nil {
 		return domain.Article{}, err
 	}
@@ -221,6 +255,16 @@ func (c *CachedArticleRepository) FindPublishedArticleById(ctx context.Context, 
 	return artPublic, nil
 }
 
+func (c *CachedArticleRepository) FindPublishedArticleList(ctx context.Context, end time.Time, offset int, limit int) ([]domain.Article, error) {
+	arts, err := c.dao.FindPublishedArticleList(ctx, end, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map[article.PublishedArticle, domain.Article](arts,
+		func(idx int, src article.PublishedArticle) domain.Article {
+			return ToArticleDomain(src.Article)
+		}), nil
+}
 func ToArticleEntity(art domain.Article) article.Article {
 	return article.Article{
 		Id:       art.Id,

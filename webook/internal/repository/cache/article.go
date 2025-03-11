@@ -20,10 +20,12 @@ type ArticleCache interface {
 	// 缓存文章
 	Set(ctx context.Context, art domain.Article) error
 	Get(ctx context.Context, id int64) (domain.Article, error)
+	Del(ctx context.Context, id int64) error
 
 	// 缓存Public文章
 	SetPublic(ctx context.Context, art domain.Article) error
 	GetPublic(ctx context.Context, id int64) (domain.Article, error)
+	DelPublic(ctx context.Context, id int64) error
 }
 
 type RedisArticleCache struct {
@@ -99,6 +101,9 @@ func (c *RedisArticleCache) Get(ctx context.Context, id int64) (domain.Article, 
 	return art, err
 }
 
+func (c *RedisArticleCache) Del(ctx context.Context, id int64) error {
+	return c.client.Del(ctx, c.detailKey(id)).Err()
+}
 func (c *RedisArticleCache) PublicKey(id int64) string {
 	return fmt.Sprintf("article:public:%d", id)
 }
@@ -121,4 +126,8 @@ func (c *RedisArticleCache) GetPublic(ctx context.Context, id int64) (domain.Art
 	var art domain.Article
 	err = json.Unmarshal(jsonData, &art)
 	return art, err
+}
+
+func (c *RedisArticleCache) DelPublic(ctx context.Context, id int64) error {
+	return c.client.Del(ctx, c.PublicKey(id)).Err()
 }

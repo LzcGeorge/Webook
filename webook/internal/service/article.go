@@ -91,7 +91,7 @@ func (a *articleService) PublicDetail(ctx context.Context, id int64) (domain.Art
 
 // PublicList 获取线上库文章列表
 func (a *articleService) PublicList(ctx context.Context, end time.Time, offset int, limit int) ([]domain.Article, error) {
-	panic("implement me")
+	return a.repo.FindPublishedArticleList(ctx, end, offset, limit)
 }
 
 //

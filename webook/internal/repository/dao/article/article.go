@@ -39,6 +39,7 @@ type ArticleDAO interface {
 	GetByAuthorId(ctx context.Context, userId int64, limit int, offset int) ([]Article, error)
 	FindById(ctx context.Context, id int64) (Article, error)
 	FindPublicById(ctx context.Context, id int64) (PublishedArticle, error)
+	FindPublishedArticleList(ctx context.Context, end time.Time, offset int, limit int) ([]PublishedArticle, error)
 }
 
 type GormArticleDAO struct {
@@ -170,8 +171,18 @@ func (dao *GormArticleDAO) FindById(ctx context.Context, id int64) (Article, err
 	return art, err
 }
 
+// FindPublicById 从线上库获取文章，只能查询状态为 ArticleStatusPublished：2 的文章
 func (dao *GormArticleDAO) FindPublicById(ctx context.Context, id int64) (PublishedArticle, error) {
 	var art PublishedArticle
-	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	err := dao.db.WithContext(ctx).Where("id = ? and status = ? ", id, 2).First(&art).Error
 	return art, err
+}
+
+// FindPublishedArticleList 获取线上库文章列表
+func (dao *GormArticleDAO) FindPublishedArticleList(ctx context.Context, end time.Time, offset int, limit int) ([]PublishedArticle, error) {
+	var arts []PublishedArticle
+	err := dao.db.WithContext(ctx).Where("status = ? and utime < ?", 2, end).
+		Order("utime desc").
+		Limit(limit).Offset(offset).Find(&arts).Error
+	return arts, err
 }
