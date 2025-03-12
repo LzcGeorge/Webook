@@ -12,12 +12,16 @@ import (
 	"Webook/webook/internal/web"
 	myjwt "Webook/webook/internal/web/jwt"
 	"Webook/webook/ioc"
-
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 )
 
-func InitWebServer() *gin.Engine {
+var rankingSvcSet = wire.NewSet(
+	cache.NewRankingCache,
+	repository.NewRankingRepository,
+	service.NewRankingService,
+)
+
+func InitWebServer() *App {
 	wire.Build(
 		// 第三方依赖
 		ioc.InitRedis, ioc.InitDB,
@@ -30,11 +34,17 @@ func InitWebServer() *gin.Engine {
 		// article2.NewGormArticleReaderDAO,
 		dao.NewInteractiveDAO,
 
+		// Ranking Svc
+		rankingSvcSet,
+		ioc.InitRankingJob,
+		ioc.InitJobs,
+
 		// Cache
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		cache.NewRedisArticleCache,
 		cache.NewInteractiveCache,
+
 		// repository
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
@@ -42,6 +52,7 @@ func InitWebServer() *gin.Engine {
 		// article.NewArticleAuthorRepository,
 		// article.NewArticleReaderRepository,
 		repository.NewInteractiveRepository,
+
 		// Service
 		ioc.InitSMSService,
 		ioc.InitWechatService,
@@ -59,6 +70,8 @@ func InitWebServer() *gin.Engine {
 		web.NewArticleReaderHandler,
 		ioc.InitGinMiddleware,
 		ioc.InitWebServer,
+
+		wire.Struct(new(App), "*"),
 	)
-	return gin.Default()
+	return new(App)
 }

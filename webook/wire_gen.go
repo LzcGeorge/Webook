@@ -16,7 +16,7 @@ import (
 	"Webook/webook/internal/web"
 	"Webook/webook/internal/web/jwt"
 	"Webook/webook/ioc"
-	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
 )
 
 import (
@@ -25,7 +25,7 @@ import (
 
 // Injectors from wire.go:
 
-func InitWebServer() *gin.Engine {
+func InitWebServer() *App {
 	cmdable := ioc.InitRedis()
 	handler := jwt.NewRedisJWTHandler(cmdable)
 	logger := ioc.InitLogger()
@@ -53,5 +53,16 @@ func InitWebServer() *gin.Engine {
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler, articleReaderHandler)
-	return engine
+	rankingService := service.NewRankingService(articleService, interactiveService)
+	rankingJob := ioc.InitRankingJob(rankingService)
+	cron := ioc.InitJobs(logger, rankingJob)
+	app := &App{
+		server: engine,
+		cron:   cron,
+	}
+	return app
 }
+
+// wire.go:
+
+var rankingSvcSet = wire.NewSet(cache.NewRankingCache, repository.NewRankingRepository, service.NewRankingService)

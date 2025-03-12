@@ -1,12 +1,11 @@
 package main
 
 import (
+	"github.com/fsnotify/fsnotify"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"net/http"
 
-	"github.com/fsnotify/fsnotify"
-	"go.uber.org/zap"
-
-	"github.com/gin-gonic/gin"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
@@ -15,14 +14,24 @@ import (
 func main() {
 	InitViperWithFlags()
 	InitLogger()
-	server := InitWebServer()
+
+	app := InitWebServer()
+	server := app.server
+	cronJob := app.cron
+
+	// 启动定时任务
+	cronJob.Start()
+	defer func() {
+		<-cronJob.Stop().Done()
+	}()
 
 	// 测试
 	server.GET("/hello", func(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "Hello, Webook!")
 	})
 
-	_ = server.Run(":8080") // listen and serve on 8080
+	// listen and serve on 8080
+	_ = server.Run(":8080")
 }
 
 func InitViper() {

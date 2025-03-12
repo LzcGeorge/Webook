@@ -1,10 +1,12 @@
 package cache
 
 import (
+	"Webook/webook/config"
 	"Webook/webook/internal/domain"
 	"context"
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
+
 	"time"
 )
 
@@ -22,7 +24,7 @@ func NewRankingCache(client redis.Cmdable) RankingCache {
 	return &RankingRedisCache{
 		client:     client,
 		key:        "ranking:top_100",
-		expiration: time.Minute * 3,
+		expiration: config.DevRedisExpire.Top100,
 	}
 }
 

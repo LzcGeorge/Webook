@@ -26,7 +26,6 @@ func InitDB(l logger.Logger) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-
 	db, err := gorm.Open(mysql.Open(dbConfig.DSN), &gorm.Config{
 		Logger: glogger.New(gormLoggerFunc(l.Debug), glogger.Config{
 			// 慢查询阈值，只有执行时间超过这个阈值，才会使用
