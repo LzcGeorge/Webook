@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type config struct {
 	DB    DBConfig
 	Redis RedisConfig
@@ -11,4 +13,10 @@ type DBConfig struct {
 
 type RedisConfig struct {
 	Addr string
+}
+
+type RedisExpire struct {
+	ArticleDetail    time.Duration
+	ArticleFirstPage time.Duration
+	PublicArticle    time.Duration
 }

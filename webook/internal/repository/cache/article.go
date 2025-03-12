@@ -1,12 +1,11 @@
 package cache
 
 import (
+	"Webook/webook/config"
+	"Webook/webook/internal/domain"
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-
-	"Webook/webook/internal/domain"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -56,7 +55,8 @@ func (c *RedisArticleCache) SetFirstPage(ctx context.Context, userId int64, arts
 	}
 
 	// 设置缓存
-	return c.client.Set(ctx, c.key(userId), jsonData, time.Minute*10).Err()
+	dur := config.DevRedisExpire.ArticleFirstPage
+	return c.client.Set(ctx, c.key(userId), jsonData, dur).Err()
 }
 
 func (c *RedisArticleCache) GetFirstPage(ctx context.Context, userId int64) ([]domain.Article, error) {
@@ -69,7 +69,9 @@ func (c *RedisArticleCache) GetFirstPage(ctx context.Context, userId int64) ([]d
 	// 反序列化
 	var arts []domain.Article
 	err = json.Unmarshal([]byte(jsonData), &arts)
-
+	if err == nil {
+		c.client.Expire(ctx, c.key(userId), config.DevRedisExpire.ArticleFirstPage)
+	}
 	return arts, err
 }
 
@@ -87,7 +89,8 @@ func (c *RedisArticleCache) Set(ctx context.Context, art domain.Article) error {
 		return err
 	}
 
-	return c.client.Set(ctx, c.detailKey(art.Id), jsonData, time.Minute).Err()
+	dur := config.DevRedisExpire.ArticleDetail
+	return c.client.Set(ctx, c.detailKey(art.Id), jsonData, dur).Err()
 }
 
 func (c *RedisArticleCache) Get(ctx context.Context, id int64) (domain.Article, error) {
@@ -95,9 +98,11 @@ func (c *RedisArticleCache) Get(ctx context.Context, id int64) (domain.Article, 
 	if err != nil {
 		return domain.Article{}, err
 	}
-
 	var art domain.Article
 	err = json.Unmarshal(jsonData, &art)
+	if err == nil {
+		c.client.Expire(ctx, c.detailKey(id), config.DevRedisExpire.ArticleDetail)
+	}
 	return art, err
 }
 
@@ -114,7 +119,8 @@ func (c *RedisArticleCache) SetPublic(ctx context.Context, art domain.Article) e
 		return err
 	}
 
-	return c.client.Set(ctx, c.PublicKey(art.Id), jsonData, time.Minute*10).Err()
+	dur := config.DevRedisExpire.PublicArticle
+	return c.client.Set(ctx, c.PublicKey(art.Id), jsonData, dur).Err()
 }
 
 func (c *RedisArticleCache) GetPublic(ctx context.Context, id int64) (domain.Article, error) {
@@ -125,6 +131,10 @@ func (c *RedisArticleCache) GetPublic(ctx context.Context, id int64) (domain.Art
 
 	var art domain.Article
 	err = json.Unmarshal(jsonData, &art)
+	if err == nil {
+		c.client.Expire(ctx, c.PublicKey(id), config.DevRedisExpire.PublicArticle)
+	}
+
 	return art, err
 }
 
