@@ -181,7 +181,7 @@ func (dao *GormArticleDAO) FindPublicById(ctx context.Context, id int64) (Publis
 // FindPublishedArticleList 获取线上库文章列表
 func (dao *GormArticleDAO) FindPublishedArticleList(ctx context.Context, end time.Time, offset int, limit int) ([]PublishedArticle, error) {
 	var arts []PublishedArticle
-	err := dao.db.WithContext(ctx).Where("status = ? and utime < ?", 2, end).
+	err := dao.db.WithContext(ctx).Where("status = ? and utime < ?", 2, end.UnixMilli()).
 		Order("utime desc").
 		Limit(limit).Offset(offset).Find(&arts).Error
 	return arts, err

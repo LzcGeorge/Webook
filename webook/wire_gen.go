@@ -53,7 +53,9 @@ func InitWebServer() *App {
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler, articleReaderHandler)
-	rankingService := service.NewRankingService(articleService, interactiveService)
+	rankingCache := cache.NewRankingCache(cmdable)
+	rankingRepository := repository.NewRankingRepository(rankingCache)
+	rankingService := service.NewRankingService(articleService, interactiveService, rankingRepository)
 	rankingJob := ioc.InitRankingJob(rankingService)
 	cron := ioc.InitJobs(logger, rankingJob)
 	app := &App{

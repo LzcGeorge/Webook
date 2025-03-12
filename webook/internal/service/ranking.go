@@ -27,7 +27,7 @@ type BatchRankingService struct {
 	repo repository.RankingRepository
 }
 
-func NewRankingService(artSvc ArticleService, interSvc InteractiveService) RankingService {
+func NewRankingService(artSvc ArticleService, interSvc InteractiveService, repo repository.RankingRepository) RankingService {
 	return &BatchRankingService{
 		artSvc:    artSvc,
 		interSvc:  interSvc,
@@ -37,6 +37,7 @@ func NewRankingService(artSvc ArticleService, interSvc InteractiveService) Ranki
 			dur := time.Since(utime).Seconds()
 			return float64(likeCnt-1) / math.Pow(dur+2, 1.5)
 		},
+		repo: repo,
 	}
 }
 func (svc *BatchRankingService) SetTop100(ctx context.Context) error {
