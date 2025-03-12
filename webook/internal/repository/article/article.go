@@ -92,8 +92,6 @@ func (c *CachedArticleRepository) Sync(ctx context.Context, art domain.Article) 
 				logger.Error(err),
 			)
 		}
-		// 缓存Public文章
-		c.cache.SetPublic(ctx, art)
 	}()
 	return c.dao.Upsert(ctx, ToArticleEntity(art))
 }

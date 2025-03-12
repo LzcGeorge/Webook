@@ -88,7 +88,8 @@ func (dao *GormInteractiveDAO) InsertLikeInfo(ctx context.Context, biz string, b
 	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		er := tx.Clauses(clause.OnConflict{
 			DoUpdates: clause.Assignments(map[string]any{
-				"utime": now,
+				"status": 1,
+				"utime":  now,
 			}),
 		}).Create(&UserLikeBiz{
 			Uid:    userId,
@@ -179,6 +180,7 @@ func (dao *GormInteractiveDAO) GetInteractive(ctx context.Context, biz string, b
 
 func (dao *GormInteractiveDAO) GetLiked(ctx context.Context, biz string, bizId int64, userId int64) (bool, error) {
 	var like UserLikeBiz
+	const validStatus = 1
 	err := dao.db.WithContext(ctx).Where("uid = ? AND biz = ? AND biz_id = ?", userId, biz, bizId).First(&like).Error
 	if err == gorm.ErrRecordNotFound {
 		// 记录不存在，说明用户没有点赞，返回 false 且没有错误
@@ -189,7 +191,7 @@ func (dao *GormInteractiveDAO) GetLiked(ctx context.Context, biz string, bizId i
 		return false, err
 	}
 	// 记录存在，根据 status 判断是否点赞
-	return like.Status == 1, nil
+	return like.Status == validStatus, nil
 }
 
 // GetCollected 获取用户是否收藏了某个业务
