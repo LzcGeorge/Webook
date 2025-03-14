@@ -9,12 +9,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ecodeclub/ekit/slice"
+
 	"github.com/gin-gonic/gin"
 )
 
 type ArticleHandler struct {
 	svc    service.ArticleService
 	logger logger.Logger
+
+	// 阅读，点赞，收藏
+	biz      string
+	interSvc service.InteractiveService
 }
 
 type ArticleReaderHandler struct {
@@ -24,21 +30,25 @@ type ArticleReaderHandler struct {
 	// 阅读，点赞，收藏
 	biz      string
 	interSvc service.InteractiveService
+	rankSvc  service.RankingService
 }
 
-func NewArticleHandler(svc service.ArticleService, logger logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, logger logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
-		svc:    svc,
-		logger: logger,
+		svc:      svc,
+		logger:   logger,
+		biz:      "article",
+		interSvc: interSvc,
 	}
 }
 
-func NewArticleReaderHandler(svc service.ArticleService, interSvc service.InteractiveService, logger logger.Logger) *ArticleReaderHandler {
+func NewArticleReaderHandler(svc service.ArticleService, interSvc service.InteractiveService, rankSvc service.RankingService, logger logger.Logger) *ArticleReaderHandler {
 	return &ArticleReaderHandler{
 		svc:      svc,
 		logger:   logger,
 		biz:      "article",
 		interSvc: interSvc,
+		rankSvc:  rankSvc,
 	}
 }
 
@@ -59,6 +69,8 @@ func (a *ArticleReaderHandler) RegisterRoutes(ug *gin.RouterGroup) {
 	ug.GET("/:id", a.PublicDetail)
 	ug.POST("/like", a.Like)
 	ug.POST("/collect", a.Collect)
+	ug.POST("/rank/list", a.RankingList)
+	ug.POST("/list", a.PublicList)
 }
 
 // Edit 编辑文章
@@ -295,24 +307,46 @@ func (a *ArticleHandler) List(ctx *gin.Context) {
 		return
 	}
 
+	bizIds := slice.Map(articles, func(idx int, art domain.Article) int64 {
+		return art.Id
+	})
+
+	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, a.biz, bizIds)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取文章交互信息失败",
+			logger.Error(err),
+		)
+		return
+	}
+
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "获取文章列表成功",
-		Data: toArticleVOs(articles),
+		Data: toArticleVOs(articles, interMap),
 	})
 }
 
-func toArticleVOs(arts []domain.Article) []ArticleVO {
+func toArticleVOs(arts []domain.Article, interMap map[int64]domain.Interactive) []ArticleVO {
 	result := make([]ArticleVO, 0)
 	for _, art := range arts {
 		result = append(result, ArticleVO{
-			Id:       art.Id,
-			Title:    art.Title,
-			Abstract: art.Abstract(),
-			Status:   art.Status.ToUint8(),
-			Ctime:    art.Ctime.Format(time.DateTime),
-			Utime:    art.Utime.Format(time.DateTime),
-
+			Id:         art.Id,
+			Title:      art.Title,
+			Abstract:   art.Abstract(),
+			Status:     art.Status.ToUint8(),
+			Ctime:      art.Ctime.Format(time.DateTime),
+			Utime:      art.Utime.Format(time.DateTime),
+			AuthorId:   art.Author.Id,
+			AuthorName: art.Author.Name,
+			ReadCnt:    interMap[art.Id].ReadCnt,
+			LikeCnt:    interMap[art.Id].LikeCnt,
+			CollectCnt: interMap[art.Id].CollectCnt,
+			Liked:      interMap[art.Id].Liked,
+			Collected:  interMap[art.Id].Collected,
 		})
 	}
 	return result
@@ -558,5 +592,121 @@ func (a *ArticleReaderHandler) Collect(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "收藏成功",
+	})
+}
+
+func (a *ArticleReaderHandler) RankingList(ctx *gin.Context) {
+	var page ArticlePage
+	if err := ctx.BindJSON(&page); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+
+	articles, err := a.rankSvc.GetFromCache(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取榜单列表失败",
+			logger.Int64("limit", int64(page.Limit)),
+			logger.Int64("offset", int64(page.Offset)),
+			logger.Int64("userId", userId),
+			logger.Error(err),
+		)
+		return
+	}
+
+	bizIds := slice.Map(articles, func(idx int, art domain.Article) int64 {
+		return art.Id
+	})
+
+	// 获取文章点赞数
+	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, "article", bizIds)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取文章交互信息失败",
+			logger.Error(err),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "获取文章列表成功",
+		Data: toArticleVOs(articles, interMap),
+	})
+}
+
+func (a *ArticleReaderHandler) PublicList(ctx *gin.Context) {
+	var page ArticlePage
+	if err := ctx.BindJSON(&page); err != nil {
+		return
+	}
+
+	// 获取 JWT 中的用户信息
+	claims, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取 JWT 中的用户信息失败")
+		return
+	}
+	userClaims := claims.(*myjwt.UserClaims)
+	userId := userClaims.UserId
+	now := time.Now()
+	articles, err := a.svc.PublicList(ctx, now, page.Offset, page.Limit)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取榜单列表失败",
+			logger.Int64("limit", int64(page.Limit)),
+			logger.Int64("offset", int64(page.Offset)),
+			logger.Int64("userId", userId),
+			logger.Error(err),
+		)
+		return
+	}
+
+	bizIds := slice.Map(articles, func(idx int, art domain.Article) int64 {
+		return art.Id
+	})
+
+	// 获取文章点赞数
+	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, "article", bizIds)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取文章交互信息失败",
+			logger.Error(err),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 0,
+		Msg:  "获取文章列表成功",
+		Data: toArticleVOs(articles, interMap),
 	})
 }

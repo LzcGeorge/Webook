@@ -13,6 +13,7 @@ import (
 	domain "Webook/webook/internal/domain"
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	gomock "go.uber.org/mock/gomock"
 )
@@ -84,6 +85,21 @@ func (m *MockArticleRepository) FindPublishedArticleById(ctx context.Context, id
 func (mr *MockArticleRepositoryMockRecorder) FindPublishedArticleById(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPublishedArticleById", reflect.TypeOf((*MockArticleRepository)(nil).FindPublishedArticleById), ctx, id)
+}
+
+// FindPublishedArticleList mocks base method.
+func (m *MockArticleRepository) FindPublishedArticleList(ctx context.Context, end time.Time, offset, limit int) ([]domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindPublishedArticleList", ctx, end, offset, limit)
+	ret0, _ := ret[0].([]domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindPublishedArticleList indicates an expected call of FindPublishedArticleList.
+func (mr *MockArticleRepositoryMockRecorder) FindPublishedArticleList(ctx, end, offset, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindPublishedArticleList", reflect.TypeOf((*MockArticleRepository)(nil).FindPublishedArticleList), ctx, end, offset, limit)
 }
 
 // List mocks base method.

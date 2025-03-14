@@ -10,6 +10,7 @@ import (
 	"Webook/webook/internal/repository"
 	article2 "Webook/webook/internal/repository/article"
 	"Webook/webook/internal/repository/cache"
+	cache2 "Webook/webook/internal/repository/cache/rank"
 	"Webook/webook/internal/repository/dao"
 	"Webook/webook/internal/repository/dao/article"
 	"Webook/webook/internal/service"
@@ -46,16 +47,18 @@ func InitWebServer() *App {
 	articleCache := cache.NewRedisArticleCache(cmdable)
 	articleRepository := article2.NewArticleRepository(articleDAO, articleCache, userRepository, logger)
 	articleService := service.NewArticleService(articleRepository)
-	articleHandler := web.NewArticleHandler(articleService, logger)
 	interactiveDAO := dao.NewInteractiveDAO(db)
 	interactiveCache := cache.NewInteractiveCache(cmdable)
 	interactiveRepository := repository.NewInteractiveRepository(interactiveDAO, interactiveCache)
 	interactiveService := service.NewInteractiveService(interactiveRepository)
-	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, logger)
-	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler, articleReaderHandler)
-	rankingCache := cache.NewRankingCache(cmdable)
+	articleHandler := web.NewArticleHandler(articleService, interactiveService, logger)
+	rankingLocalCache := cache2.NewRankingLocalCache()
+	rankingRedisCache := cache2.NewRankingRedisCache(cmdable)
+	rankingCache := cache2.NewCompositeRankingCache(rankingLocalCache, rankingRedisCache)
 	rankingRepository := repository.NewRankingRepository(rankingCache)
 	rankingService := service.NewRankingService(articleService, interactiveService, rankingRepository)
+	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, rankingService, logger)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler, articleReaderHandler)
 	rankingJob := ioc.InitRankingJob(rankingService)
 	cron := ioc.InitJobs(logger, rankingJob)
 	app := &App{
@@ -67,4 +70,4 @@ func InitWebServer() *App {
 
 // wire.go:
 
-var rankingSvcSet = wire.NewSet(cache.NewRankingCache, repository.NewRankingRepository, service.NewRankingService)
+var rankingSvcSet = wire.NewSet(cache2.NewRankingLocalCache, cache2.NewRankingRedisCache, cache2.NewCompositeRankingCache, repository.NewRankingRepository, service.NewRankingService)

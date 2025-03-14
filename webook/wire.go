@@ -6,17 +6,21 @@ import (
 	"Webook/webook/internal/repository"
 	"Webook/webook/internal/repository/article"
 	"Webook/webook/internal/repository/cache"
+	rankCache "Webook/webook/internal/repository/cache/rank"
 	"Webook/webook/internal/repository/dao"
 	article2 "Webook/webook/internal/repository/dao/article"
 	"Webook/webook/internal/service"
 	"Webook/webook/internal/web"
 	myjwt "Webook/webook/internal/web/jwt"
 	"Webook/webook/ioc"
+
 	"github.com/google/wire"
 )
 
 var rankingSvcSet = wire.NewSet(
-	cache.NewRankingCache,
+	rankCache.NewRankingLocalCache,
+	rankCache.NewRankingRedisCache,
+	rankCache.NewCompositeRankingCache,
 	repository.NewRankingRepository,
 	service.NewRankingService,
 )

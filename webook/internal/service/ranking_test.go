@@ -4,10 +4,11 @@ import (
 	"Webook/webook/internal/domain"
 	svcmocks "Webook/webook/internal/service/mocks"
 	"context"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRankingTopN(t *testing.T) {
