@@ -4,10 +4,11 @@ import (
 	"Webook/webook/internal/domain"
 	"Webook/webook/internal/repository"
 	"context"
-	"github.com/ecodeclub/ekit/queue"
-	"github.com/ecodeclub/ekit/slice"
 	"math"
 	"time"
+
+	"github.com/ecodeclub/ekit/queue"
+	"github.com/ecodeclub/ekit/slice"
 )
 
 type RankingService interface {
@@ -87,7 +88,7 @@ func (svc *BatchRankingService) GetTop100(ctx context.Context) ([]domain.Article
 		})
 
 		// 获取文章点赞数
-		interMap, err := svc.interSvc.GetInterMapByBizIds(ctx, "article", bizIds)
+		interMap, err := svc.interSvc.GetInterMapByBizIds(ctx, "article", bizIds, -1)
 		if err != nil {
 			return nil, err
 		}

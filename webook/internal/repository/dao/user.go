@@ -22,6 +22,7 @@ type UserDAO interface {
 	FindById(ctx context.Context, id int64) (User, error)
 	FindByWechat(ctx context.Context, openId string) (User, error)
 	UpdateById(ctx context.Context, user User) error
+	FindByIds(ctx context.Context, ids []int64) ([]User, error)
 }
 
 type GormUserDAO struct {
@@ -105,4 +106,10 @@ func (dao *GormUserDAO) FindByWechat(ctx context.Context, openId string) (User, 
 	var user User
 	err := dao.db.WithContext(ctx).Where("wechat_open_id = ?", openId).First(&user).Error
 	return user, err
+}
+
+func (dao *GormUserDAO) FindByIds(ctx context.Context, ids []int64) ([]User, error) {
+	var users []User
+	err := dao.db.WithContext(ctx).Where("id IN ?", ids).Find(&users).Error
+	return users, err
 }

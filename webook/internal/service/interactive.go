@@ -13,7 +13,7 @@ type InteractiveService interface {
 	DecreaseLike(ctx context.Context, biz string, bizId int64, userId int64) error
 	Collect(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
 	Get(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error)
-	GetInterMapByBizIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
+	GetInterMapByBizIds(ctx context.Context, biz string, bizIds []int64, userId int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveService struct {
@@ -46,6 +46,6 @@ func (s *interactiveService) Get(ctx context.Context, biz string, bizId int64, u
 	return s.repo.GetInteractive(ctx, biz, bizId, userId)
 }
 
-func (s *interactiveService) GetInterMapByBizIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
-	return s.repo.GetInterMapByBizIds(ctx, biz, bizIds)
+func (s *interactiveService) GetInterMapByBizIds(ctx context.Context, biz string, bizIds []int64, userId int64) (map[int64]domain.Interactive, error) {
+	return s.repo.GetInterMapByBizIds(ctx, biz, bizIds, userId)
 }

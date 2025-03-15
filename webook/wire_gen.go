@@ -57,7 +57,7 @@ func InitWebServer() *App {
 	rankingCache := cache2.NewCompositeRankingCache(rankingLocalCache, rankingRedisCache)
 	rankingRepository := repository.NewRankingRepository(rankingCache)
 	rankingService := service.NewRankingService(articleService, interactiveService, rankingRepository)
-	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, rankingService, logger)
+	articleReaderHandler := web.NewArticleReaderHandler(articleService, interactiveService, rankingService, userService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler, articleReaderHandler)
 	rankingJob := ioc.InitRankingJob(rankingService)
 	cron := ioc.InitJobs(logger, rankingJob)

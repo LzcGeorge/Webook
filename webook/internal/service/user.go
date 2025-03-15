@@ -17,6 +17,7 @@ type UserService interface {
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 	FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 	Edit(ctx context.Context, user domain.User) error
+	GetNameMapByIds(ctx context.Context, ids []int64) (map[int64]string, error)
 }
 
 type UserServiceStruct struct {
@@ -120,4 +121,8 @@ func (svc *UserServiceStruct) FindOrCreateByWechat(ctx context.Context, wechatIn
 	}
 
 	return svc.repo.FindByWechat(ctx, wechatInfo.OpenId)
+}
+
+func (svc *UserServiceStruct) GetNameMapByIds(ctx context.Context, ids []int64) (map[int64]string, error) {
+	return svc.repo.GetNameMapByIds(ctx, ids)
 }

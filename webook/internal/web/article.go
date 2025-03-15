@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/ecodeclub/ekit/slice"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,6 +30,7 @@ type ArticleReaderHandler struct {
 	biz      string
 	interSvc service.InteractiveService
 	rankSvc  service.RankingService
+	userSvc  service.UserService
 }
 
 func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, logger logger.Logger) *ArticleHandler {
@@ -42,13 +42,14 @@ func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveS
 	}
 }
 
-func NewArticleReaderHandler(svc service.ArticleService, interSvc service.InteractiveService, rankSvc service.RankingService, logger logger.Logger) *ArticleReaderHandler {
+func NewArticleReaderHandler(svc service.ArticleService, interSvc service.InteractiveService, rankSvc service.RankingService, userSvc service.UserService, logger logger.Logger) *ArticleReaderHandler {
 	return &ArticleReaderHandler{
 		svc:      svc,
 		logger:   logger,
 		biz:      "article",
 		interSvc: interSvc,
 		rankSvc:  rankSvc,
+		userSvc:  userSvc,
 	}
 }
 
@@ -311,7 +312,7 @@ func (a *ArticleHandler) List(ctx *gin.Context) {
 		return art.Id
 	})
 
-	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, a.biz, bizIds)
+	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, a.biz, bizIds, userId)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -326,11 +327,11 @@ func (a *ArticleHandler) List(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "获取文章列表成功",
-		Data: toArticleVOs(articles, interMap),
+		Data: toArticleVOs(articles, interMap, nil),
 	})
 }
 
-func toArticleVOs(arts []domain.Article, interMap map[int64]domain.Interactive) []ArticleVO {
+func toArticleVOs(arts []domain.Article, interMap map[int64]domain.Interactive, authorMap map[int64]string) []ArticleVO {
 	result := make([]ArticleVO, 0)
 	for _, art := range arts {
 		result = append(result, ArticleVO{
@@ -341,7 +342,7 @@ func toArticleVOs(arts []domain.Article, interMap map[int64]domain.Interactive) 
 			Ctime:      art.Ctime.Format(time.DateTime),
 			Utime:      art.Utime.Format(time.DateTime),
 			AuthorId:   art.Author.Id,
-			AuthorName: art.Author.Name,
+			AuthorName: authorMap[art.Author.Id],
 			ReadCnt:    interMap[art.Id].ReadCnt,
 			LikeCnt:    interMap[art.Id].LikeCnt,
 			CollectCnt: interMap[art.Id].CollectCnt,
@@ -634,7 +635,7 @@ func (a *ArticleReaderHandler) RankingList(ctx *gin.Context) {
 	})
 
 	// 获取文章点赞数
-	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, "article", bizIds)
+	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, "article", bizIds, userId)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -646,10 +647,25 @@ func (a *ArticleReaderHandler) RankingList(ctx *gin.Context) {
 		return
 	}
 
+	// 获取作者信息
+	userIds := slice.Map(articles, func(idx int, art domain.Article) int64 {
+		return art.Author.Id
+	})
+	authorMap, err := a.userSvc.GetNameMapByIds(ctx, userIds)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取作者信息失败",
+			logger.Error(err),
+		)
+		return
+	}
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "获取文章列表成功",
-		Data: toArticleVOs(articles, interMap),
+		Data: toArticleVOs(articles, interMap, authorMap),
 	})
 }
 
@@ -687,12 +703,11 @@ func (a *ArticleReaderHandler) PublicList(ctx *gin.Context) {
 		return
 	}
 
+	// 获取文章点赞数
 	bizIds := slice.Map(articles, func(idx int, art domain.Article) int64 {
 		return art.Id
 	})
-
-	// 获取文章点赞数
-	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, "article", bizIds)
+	interMap, err := a.interSvc.GetInterMapByBizIds(ctx, "article", bizIds, userId)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -704,9 +719,25 @@ func (a *ArticleReaderHandler) PublicList(ctx *gin.Context) {
 		return
 	}
 
+	// 获取作者信息
+	userIds := slice.Map(articles, func(idx int, art domain.Article) int64 {
+		return art.Author.Id
+	})
+	authorMap, err := a.userSvc.GetNameMapByIds(ctx, userIds)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.logger.Error("获取作者信息失败",
+			logger.Error(err),
+		)
+		return
+	}
+
 	ctx.JSON(http.StatusOK, Result{
 		Code: 0,
 		Msg:  "获取文章列表成功",
-		Data: toArticleVOs(articles, interMap),
+		Data: toArticleVOs(articles, interMap, authorMap),
 	})
 }

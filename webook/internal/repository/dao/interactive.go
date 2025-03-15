@@ -54,6 +54,8 @@ type InteractiveDAO interface {
 	GetLiked(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
 	GetCollected(ctx context.Context, biz string, bizId int64, userId int64) (bool, error)
 	GetByBizIds(ctx context.Context, biz string, bizIds []int64) ([]Interactive, error)
+	GetLikedByBizIds(ctx context.Context, biz string, bizIds []int64, userId int64) ([]UserLikeBiz, error)
+	GetCollectedByBizIds(ctx context.Context, biz string, bizIds []int64, userId int64) ([]UserCollectBiz, error)
 }
 
 type GormInteractiveDAO struct {
@@ -205,4 +207,16 @@ func (dao *GormInteractiveDAO) GetByBizIds(ctx context.Context, biz string, bizI
 	var res []Interactive
 	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id IN ?", biz, bizIds).Find(&res).Error
 	return res, err
+}
+
+func (dao *GormInteractiveDAO) GetLikedByBizIds(ctx context.Context, biz string, bizIds []int64, userId int64) ([]UserLikeBiz, error) {
+	var likes []UserLikeBiz
+	err := dao.db.WithContext(ctx).Where("uid = ? AND biz = ? AND biz_id IN ?", userId, biz, bizIds).Find(&likes).Error
+	return likes, err
+}
+
+func (dao *GormInteractiveDAO) GetCollectedByBizIds(ctx context.Context, biz string, bizIds []int64, userId int64) ([]UserCollectBiz, error) {
+	var collects []UserCollectBiz
+	err := dao.db.WithContext(ctx).Where("uid = ? AND biz = ? AND biz_id IN ?", userId, biz, bizIds).Find(&collects).Error
+	return collects, err
 }

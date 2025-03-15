@@ -13,7 +13,7 @@ type InteractiveRepository interface {
 	DecreaseLikeCnt(ctx context.Context, biz string, bizId int64, userId int64) error
 	InsertCollection(ctx context.Context, biz string, bizId int64, collectionId int64, userId int64) error
 	GetInteractive(ctx context.Context, biz string, bizId int64, userId int64) (domain.Interactive, error)
-	GetInterMapByBizIds(ctx context.Context, biz string, BizIds []int64) (map[int64]domain.Interactive, error)
+	GetInterMapByBizIds(ctx context.Context, biz string, BizIds []int64, userId int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveRepository struct {
@@ -92,18 +92,43 @@ func (r *interactiveRepository) GetInteractive(ctx context.Context, biz string, 
 	}, nil
 }
 
-func (r *interactiveRepository) GetInterMapByBizIds(ctx context.Context, biz string, BizIds []int64) (map[int64]domain.Interactive, error) {
+func (r *interactiveRepository) GetInterMapByBizIds(ctx context.Context, biz string, BizIds []int64, userId int64) (map[int64]domain.Interactive, error) {
 	inters, err := r.dao.GetByBizIds(ctx, biz, BizIds)
 	if err != nil {
 		return nil, err
 	}
-
+	likes, err := r.dao.GetLikedByBizIds(ctx, biz, BizIds, userId)
+	if err != nil {
+		return nil, err
+	}
+	collects, err := r.dao.GetCollectedByBizIds(ctx, biz, BizIds, userId)
+	if err != nil {
+		return nil, err
+	}
 	res := make(map[int64]domain.Interactive, len(inters))
 	for _, inter := range inters {
 		res[inter.BizId] = domain.Interactive{
 			ReadCnt:    inter.ReadCnt,
 			LikeCnt:    inter.LikeCnt,
 			CollectCnt: inter.CollectCnt,
+		}
+	}
+	const likeValid = 1
+	const unCollected = 0
+	for _, like := range likes {
+		if like.Status == likeValid {
+			if inter, ok := res[like.BizId]; ok {
+				inter.Liked = true
+				res[like.BizId] = inter
+			}
+		}
+	}
+	for _, collect := range collects {
+		if collect.Cid != unCollected {
+			if inter, ok := res[collect.BizId]; ok {
+				inter.Collected = true
+				res[collect.BizId] = inter
+			}
 		}
 	}
 	return res, nil

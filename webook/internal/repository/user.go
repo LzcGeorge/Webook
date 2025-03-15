@@ -16,6 +16,7 @@ type UserRepository interface {
 	FindById(ctx context.Context, id int64) (domain.User, error)
 	FindByWechat(ctx context.Context, openId string) (domain.User, error)
 	UpdateById(ctx context.Context, user domain.User) error
+	GetNameMapByIds(ctx context.Context, ids []int64) (map[int64]string, error)
 }
 type CachedUserRepository struct {
 	dao   dao.UserDAO
@@ -130,4 +131,16 @@ func (repo *CachedUserRepository) FindByWechat(ctx context.Context, openId strin
 		return domain.User{}, err
 	}
 	return repo.entityToDomain(user), nil
+}
+
+func (repo *CachedUserRepository) GetNameMapByIds(ctx context.Context, ids []int64) (map[int64]string, error) {
+	users, err := repo.dao.FindByIds(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64]string, len(users))
+	for _, user := range users {
+		res[user.Id] = user.Nickname
+	}
+	return res, nil
 }

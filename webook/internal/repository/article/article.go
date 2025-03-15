@@ -8,9 +8,10 @@ import (
 	"Webook/webook/pkg/logger"
 	"context"
 	"errors"
+	"time"
+
 	"github.com/ecodeclub/ekit/slice"
 	"gorm.io/gorm"
-	"time"
 )
 
 type ArticleRepository interface {
@@ -51,6 +52,19 @@ func (c *CachedArticleRepository) Create(ctx context.Context, art domain.Article
 				logger.Error(err),
 			)
 		}
+		if err := c.cache.DelPublic(ctx, art.Id); err != nil {
+			c.logger.Error("Create Article 后删除缓存 Public Article 失败",
+				logger.Int64("articleId", art.Id),
+				logger.Error(err),
+			)
+		}
+
+		if err := c.cache.Del(ctx, art.Id); err != nil {
+			c.logger.Error("Create Article 后删除缓存 article 失败",
+				logger.Int64("articleId", art.Id),
+				logger.Error(err),
+			)
+		}
 	}()
 	return c.dao.Insert(ctx, ToArticleEntity(art))
 }
@@ -62,6 +76,19 @@ func (c *CachedArticleRepository) Update(ctx context.Context, art domain.Article
 		if err != nil {
 			c.logger.Error("Update Article 后删除缓存失败",
 				logger.Int64("userId", art.Author.Id),
+				logger.Error(err),
+			)
+		}
+		if err := c.cache.DelPublic(ctx, art.Id); err != nil {
+			c.logger.Error("Update Article 后删除缓存 Public Article 失败",
+				logger.Int64("articleId", art.Id),
+				logger.Error(err),
+			)
+		}
+
+		if err := c.cache.Del(ctx, art.Id); err != nil {
+			c.logger.Error("Update Article 后删除缓存 article 失败",
+				logger.Int64("articleId", art.Id),
 				logger.Error(err),
 			)
 		}

@@ -1,6 +1,6 @@
 # Webook
 
-Webook小微书（仿小红书）
+## Webook小微书
 
 - DDD 框架：Domin-Drive Design
 
@@ -14,7 +14,45 @@ Webook小微书（仿小红书）
 - 第三方依赖：在 webook 目录下，执行 `docker compose up`
   - 执行 `docker compose down` 会删除数据库，结束 `docker compose up` 进程不会
   - 包含 mysql ，redis，viper，etcd
-- 依赖注入：在 Webook 目录下，执行 `wire`
+- 依赖注入：在 webook 目录下，执行 `wire`
 - mock: 在 Webook 目录下，执行 `make mock`
+
+## 页面预览
+
+### 主页
+
+![image-20250315190925018](./img/image-20250315190925018.png)
+
+![image-20250315191253565](./img/image-20250315191253565.png)
+
+### 登录/注册
+
+![image-20250315191117324](./img/image-20250315191117324.png)
+
+![image-20250315191025972](./img/image-20250315191025972.png)
+
+![image-20250315191055835](./img/image-20250315191055835.png)
+
+### 文章广场
+
+![image-20250315191441243](./img/image-20250315191441243.png)
+
+### 热榜
+
+![image-20250315191523379](./img/image-20250315191523379.png)
+
+### 我的文章
+
+![image-20250315191926233](./img/image-20250315191926233.png)
+
+### 编辑文章
+
+![image-20250315191702846](./img/image-20250315191702846.png)
+
+### 个人资料
+
+![image-20250315192020511](./img/image-20250315192020511.png)
+
+## 功能介绍
 
 功能详细介绍见 **[博客: webook](https://docs.selfknow.cn/projects/golang/webook/)**
