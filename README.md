@@ -6,6 +6,48 @@
 
     ![image-20241226202631481](./img/image-20241226202631481.png)
 
+项目架构
+
+```bash
+.
+├── config
+│   ├── dev.go
+│   ├── dev.yaml
+│   ├── k8s.go
+│   ├── redisExpire.go
+│   ├── test.yaml
+│   └── types.go
+├── internal
+│   ├── domain
+│   ├── integration
+│   ├── job
+│   ├── repository
+│   ├── service
+│   └── web
+├── ioc
+│   ├── db.go
+│   ├── job.go
+│   ├── log.go
+│   ├── redis.go
+│   ├── sms.go
+│   ├── web.go
+│   └── wechat.go
+├── main.go
+├── pkg
+│   ├── ginx
+│   ├── limiter
+│   └── logger
+├── script
+│   └── mysql
+├── webook
+├── Dockerfile
+├── docker-compose.yaml
+├── app.go
+├── Makefile
+├── wire.go
+└── wire_gen.go
+```
+
 项目启动：
 - 前端：在 webook-fe 目录下，执行 `npm run dev`
 - 后端：在 webook 目录下，执行 `go run . --config config/dev.yaml`
@@ -16,6 +58,8 @@
   - 包含 mysql ，redis，viper，etcd
 - 依赖注入：在 webook 目录下，执行 `wire`
 - mock: 在 Webook 目录下，执行 `make mock`
+
+
 
 ## 页面预览
 
