@@ -1,52 +1,75 @@
 # Webook
 
-## Webook小微书
+## 整体架构
 
-- DDD 框架：Domin-Drive Design
+项目采用典型的领域驱动设计(DDD)分层架构:
 
-    ![image-20241226202631481](./img/image-20241226202631481.png)
+1. **表示层(Web层)** - `internal/web`
+   - 负责HTTP请求处理和响应
+   - 使用Gin框架作为Web框架
+   - 包含各种Handler，如UserHandler、ArticleHandler等
 
-项目架构
+2. **业务逻辑层(Service层)** - `internal/service`
+   - 实现核心业务逻辑
+   - 定义接口和实现类，如UserService、CodeService等
+   - 不直接与数据库交互，通过Repository层
 
-```bash
-.
-├── config
-│   ├── dev.go
-│   ├── dev.yaml
-│   ├── k8s.go
-│   ├── redisExpire.go
-│   ├── test.yaml
-│   └── types.go
-├── internal
-│   ├── domain
-│   ├── integration
-│   ├── job
-│   ├── repository
-│   ├── service
-│   └── web
-├── ioc
-│   ├── db.go
-│   ├── job.go
-│   ├── log.go
-│   ├── redis.go
-│   ├── sms.go
-│   ├── web.go
-│   └── wechat.go
-├── main.go
-├── pkg
-│   ├── ginx
-│   ├── limiter
-│   └── logger
-├── script
-│   └── mysql
-├── webook
-├── Dockerfile
-├── docker-compose.yaml
-├── app.go
-├── Makefile
-├── wire.go
-└── wire_gen.go
-```
+3. **数据访问层(Repository层)** - `internal/repository`
+   - 定义数据访问接口
+   - 包含缓存逻辑实现(cache目录)
+   - 通过DAO层与数据库交互
+
+4. **数据访问对象层(DAO层)** - `internal/repository/dao`
+   - 直接操作数据库(如MongoDB、Redis等)
+
+5. **领域模型层(Domain层)** - `internal/domain`
+   - 定义核心业务实体，如User、Article等
+   - 不包含业务逻辑，只包含数据结构
+
+6. **定时任务层(Job层)** - `internal/job`
+   - 处理定时和周期性任务
+   - 使用cron库实现
+
+### 技术栈
+
+- **Web框架**: Gin
+- **数据库**: MySQL 
+- **缓存**: Redis
+- **依赖注入**: Wire
+- **配置管理**: Viper
+- **日志**: Zap
+- **定时任务**: cron
+- **认证**: JWT, Session
+- **容器化**: Docker
+
+### 业务功能
+
+1. **用户管理**:
+   - 注册/登录(邮箱密码、手机验证码)
+   - 个人资料管理
+   - OAuth2集成(微信登录)
+
+2. **文章系统**:
+   - 文章创建、编辑、查询
+   - 作者和读者视图
+
+3. **互动功能**:
+   - 点赞、收藏、评论等
+
+4. **排行榜功能**:
+   - 文章排名
+   - 使用Redis缓存实现
+
+### 架构特点
+
+1. **依赖注入**: 使用Wire框架管理依赖，简化组件初始化
+2. **缓存设计**: 多级缓存(本地缓存+Redis)
+3. **接口分离**: 每层都定义接口，遵循依赖倒置原则
+4. **领域驱动**: 基于DDD设计思想
+5. **微服务准备**: 目录结构适合未来拆分为微服务
+6. **测试**: 各层都有单元测试和mock实现
+
+## 项目部署
 
 项目启动：
 - 前端：在 webook-fe 目录下，执行 `npm run dev`
